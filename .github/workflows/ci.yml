@@ -20,7 +20,7 @@ jobs:
         run: deno lint
 
       - name: Type Check
-        run: deno check scripts/*.ts *.ts
+        run: deno check scripts/*.ts *.ts src/*.ts
 
       - name: Tests
         run: |

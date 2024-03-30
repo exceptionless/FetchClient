@@ -42,7 +42,7 @@ export function useGlobalMiddleware(middleware: FetchClientMiddleware) {
 }
 
 export class FetchClient {
-  private fetch!: Fetch;
+  private fetch: Fetch;
   private middleware: FetchClientMiddleware[] = [];
   private _requestCount = new Counter();
 
