@@ -2,7 +2,7 @@ import { Counter } from "./Counter.ts";
 import type { RequestOptions } from "./RequestOptions.ts";
 import { ProblemDetails } from "./ProblemDetails.ts";
 import type { FetchClientResponse } from "./FetchClientResponse.ts";
-import type { FetchClientMiddleware } from "./FetchClientMiddleware.ts";
+import type { FetchClientMiddleware, Next } from "./FetchClientMiddleware.ts";
 import type { FetchClientContext } from "./FetchClientContext.ts";
 import { parseLinkHeader } from "./LinkHeader.ts";
 
@@ -16,24 +16,46 @@ const globalRequestCount = new Counter((count) => globalLoading = count > 0);
 export let globalLoading: boolean = false;
 
 let getAccessToken: () => string | null = () => null;
+/**
+ * Sets the access token function.
+ * @param {() => string | null} accessTokenFunc - The function that returns the access token.
+ */
 export function setAccessTokenFunc(accessTokenFunc: () => string | null) {
   getAccessToken = accessTokenFunc;
 }
 
+/**
+ * Sets the default request options for the FetchClient.
+ * @param options - The request options to set as default.
+ */
 export function setDefaultRequestOptions(options: RequestOptions) {
   defaultOptions = { ...defaultOptions, ...options };
 }
 
+/**
+ * Sets the default model validator function.
+ *
+ * @param validate - The function that validates the model.
+ * @returns void
+ */
 export function setDefaultModelValidator(
   validate: (model: object | null) => Promise<ProblemDetails | null>,
 ) {
   defaultOptions = { ...defaultOptions, modelValidator: validate };
 }
 
+/**
+ * Sets the default base URL for the FetchClient.
+ * @param url - The URL to set as the default base URL.
+ */
 export function setDefaultBaseUrl(url: string) {
   defaultOptions = { ...defaultOptions, baseUrl: url };
 }
 
+/**
+ * Adds a global middleware to the default options of the FetchClient.
+ * @param middleware - The middleware function to be added.
+ */
 export function useGlobalMiddleware(middleware: FetchClientMiddleware) {
   defaultOptions = {
     ...defaultOptions,
@@ -41,11 +63,18 @@ export function useGlobalMiddleware(middleware: FetchClientMiddleware) {
   };
 }
 
+/**
+ * Represents a client for making HTTP requests using the Fetch API.
+ */
 export class FetchClient {
   private fetch: Fetch;
   private middleware: FetchClientMiddleware[] = [];
   private _requestCount = new Counter();
 
+  /**
+   * Represents a FetchClient that handles HTTP requests using the Fetch API.
+   * @param fetch - An optional Fetch implementation to use for making HTTP requests. If not provided, the global `fetch` function will be used.
+   */
   constructor(fetch?: Fetch) {
     if (fetch) {
       this.fetch = fetch;
@@ -54,18 +83,38 @@ export class FetchClient {
     }
   }
 
+  /**
+   * Gets the number of inflight requests for this FetchClient instance.
+   */
   public get requestCount(): number {
     return this._requestCount.count;
   }
 
+  /**
+   * Gets a value indicating whether the client is currently loading.
+   * @returns {boolean} A boolean value indicating whether the client is loading.
+   */
   public get loading(): boolean {
     return this.requestCount > 0;
   }
 
+  /**
+   * Adds one or more middleware functions to the FetchClient's middleware pipeline.
+   * Middleware functions are executed in the order they are added.
+   *
+   * @param mw - The middleware functions to add.
+   */
   public use(...mw: FetchClientMiddleware[]): void {
     this.middleware.push(...mw);
   }
 
+  /**
+   * Sends a GET request to the specified URL.
+   *
+   * @param url - The URL to send the GET request to.
+   * @param options - The optional request options.
+   * @returns A promise that resolves to the response of the GET request.
+   */
   async get(
     url: string,
     options?: RequestOptions,
@@ -86,6 +135,12 @@ export class FetchClient {
     return response;
   }
 
+  /**
+   * Sends a GET request to the specified URL and returns the response as JSON.
+   * @param url - The URL to send the GET request to.
+   * @param options - Optional request options.
+   * @returns A promise that resolves to the response as JSON.
+   */
   getJSON<T>(
     url: string,
     options?: RequestOptions,
@@ -93,6 +148,14 @@ export class FetchClient {
     return this.get(url, options) as Promise<FetchClientResponse<T>>;
   }
 
+  /**
+   * Sends a POST request to the specified URL.
+   *
+   * @param url - The URL to send the request to.
+   * @param body - The request body, can be an object or a string.
+   * @param options - Additional options for the request.
+   * @returns A promise that resolves to a FetchClientResponse object.
+   */
   async post(
     url: string,
     body?: object | string,
@@ -115,6 +178,14 @@ export class FetchClient {
     return response;
   }
 
+  /**
+   * Sends a POST request with form data to the specified URL.
+   *
+   * @param url - The URL to send the request to.
+   * @param formData - The form data to include in the request body.
+   * @param options - The optional request options.
+   * @returns A promise that resolves to the response of the request.
+   */
   async postForm(
     url: string,
     formData: FormData,
@@ -134,6 +205,15 @@ export class FetchClient {
     return response;
   }
 
+  /**
+   * Sends a POST request with JSON payload to the specified URL.
+   *
+   * @template T - The type of the response data.
+   * @param {string} url - The URL to send the request to.
+   * @param {object | string} [body] - The JSON payload to send with the request.
+   * @param {RequestOptions} [options] - Additional options for the request.
+   * @returns {Promise<FetchClientResponse<T>>} - A promise that resolves to the response data.
+   */
   postJSON<T>(
     url: string,
     body?: object | string,
@@ -142,6 +222,13 @@ export class FetchClient {
     return this.post(url, body, options) as Promise<FetchClientResponse<T>>;
   }
 
+  /**
+   * Sends a PUT request to the specified URL with the given body and options.
+   * @param url - The URL to send the request to.
+   * @param body - The request body, can be an object or a string.
+   * @param options - The request options.
+   * @returns A promise that resolves to a FetchClientResponse object.
+   */
   async put(
     url: string,
     body?: object | string,
@@ -164,6 +251,15 @@ export class FetchClient {
     return response;
   }
 
+  /**
+   * Sends a PUT request with JSON payload to the specified URL.
+   *
+   * @template T - The type of the response data.
+   * @param {string} url - The URL to send the request to.
+   * @param {object | string} [body] - The JSON payload to send with the request.
+   * @param {RequestOptions} [options] - Additional options for the request.
+   * @returns {Promise<FetchClientResponse<T>>} - A promise that resolves to the response data.
+   */
   putJSON<T>(
     url: string,
     body?: object | string,
@@ -172,6 +268,13 @@ export class FetchClient {
     return this.put(url, body, options) as Promise<FetchClientResponse<T>>;
   }
 
+  /**
+   * Sends a PATCH request to the specified URL with the provided body and options.
+   * @param url - The URL to send the PATCH request to.
+   * @param body - The body of the request. It can be an object or a string.
+   * @param options - The options for the request.
+   * @returns A Promise that resolves to the response of the PATCH request.
+   */
   async patch(
     url: string,
     body?: object | string,
@@ -194,6 +297,15 @@ export class FetchClient {
     return response;
   }
 
+  /**
+   * Sends a PATCH request with JSON payload to the specified URL.
+   *
+   * @template T - The type of the response data.
+   * @param {string} url - The URL to send the request to.
+   * @param {object | string} [body] - The JSON payload to send with the request.
+   * @param {RequestOptions} [options] - Additional options for the request.
+   * @returns {Promise<FetchClientResponse<T>>} - A promise that resolves to the response data.
+   */
   patchJSON<T>(
     url: string,
     body?: object | string,
@@ -202,6 +314,13 @@ export class FetchClient {
     return this.patch(url, body, options) as Promise<FetchClientResponse<T>>;
   }
 
+  /**
+   * Sends a DELETE request to the specified URL.
+   *
+   * @param url - The URL to send the DELETE request to.
+   * @param options - The options for the request.
+   * @returns A promise that resolves to a `FetchClientResponse` object.
+   */
   async delete(
     url: string,
     options?: RequestOptions,
@@ -432,5 +551,3 @@ export class FetchClient {
     throw response;
   }
 }
-
-export type Next = () => Promise<void>;
