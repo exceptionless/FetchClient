@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  workflow_call:
+
+jobs:
+  deno:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Code Style
+        run: deno fmt --check
+
+      - name: Linting
+        run: deno lint
+
+      - name: Type Check
+        run: deno check scripts/*.ts *.ts
+
+      - name: Tests
+        run: |
+          deno test --coverage=cov/
+          deno coverage cov/
+
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - run: deno task build
