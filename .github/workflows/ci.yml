@@ -25,7 +25,7 @@ jobs:
           version=$(minver --tag-prefix v)
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "### Version: $version" >> $GITHUB_STEP_SUMMARY
-          echo $(jq --arg version "$version" '.version = $version' deno.json) > deno.json
+          sed -i -e "s/0.0.0/$version/" deno.json
           cat deno.json
       
       - name: Setup Deno
