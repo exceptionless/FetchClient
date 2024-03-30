@@ -7,9 +7,29 @@ on:
 jobs:
   deno:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: denoland/setup-deno@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Build Reason
+        run: "echo ref: ${{github.ref}} event: ${{github.event_name}}"
+      
+      - name: Build Version
+        run: |
+          dotnet tool install --global minver-cli --version 5.0.0
+          version=$(minver --tag-prefix v)
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "### Version: $version" >> $GITHUB_STEP_SUMMARY
+          echo $(jq --arg version "$version" '.version = $version' deno.json) > deno.json
+          cat deno.json
+      
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
 
