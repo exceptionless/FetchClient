@@ -122,6 +122,7 @@ export class FetchClient {
     options = { ...defaultOptions, ...options };
     const response = await this.fetchInternal(
       url,
+      options,
       {
         method: "GET",
         headers: {
@@ -129,7 +130,6 @@ export class FetchClient {
           ...options?.headers,
         },
       },
-      options,
     );
 
     return response;
@@ -167,12 +167,12 @@ export class FetchClient {
 
     const response = await this.fetchInternal(
       url,
+      options,
       {
         method: "POST",
         headers: { "Content-Type": "application/json", ...options?.headers },
         body: typeof body === "string" ? body : JSON.stringify(body),
       },
-      options,
     );
 
     return response;
@@ -194,12 +194,12 @@ export class FetchClient {
     options = { ...defaultOptions, ...options };
     const response = await this.fetchInternal(
       url,
+      options,
       {
         method: "POST",
         headers: { ...options?.headers },
         body: formData,
       },
-      options,
     );
 
     return response;
@@ -240,12 +240,12 @@ export class FetchClient {
 
     const response = await this.fetchInternal(
       url,
+      options,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...options?.headers },
         body: typeof body === "string" ? body : JSON.stringify(body),
       },
-      options,
     );
 
     return response;
@@ -286,12 +286,12 @@ export class FetchClient {
 
     const response = await this.fetchInternal(
       url,
+      options,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...options?.headers },
         body: typeof body === "string" ? body : JSON.stringify(body),
       },
-      options,
     );
 
     return response;
@@ -328,11 +328,11 @@ export class FetchClient {
     options = { ...defaultOptions, ...options };
     return await this.fetchInternal(
       url,
+      options,
       {
         method: "DELETE",
         headers: options?.headers ?? {},
       },
-      options,
     );
   }
 
@@ -357,8 +357,8 @@ export class FetchClient {
 
   private async fetchInternal<T>(
     url: string,
+    options: RequestOptions,
     init?: RequestInit,
-    options?: RequestOptions,
   ): Promise<FetchClientResponse<T>> {
     url = this.buildUrl(url, options);
 
@@ -410,6 +410,7 @@ export class FetchClient {
     this._requestCount.increment();
 
     const context: FetchClientContext = {
+      options,
       request: new Request(url, init),
       response: null,
       data: {},

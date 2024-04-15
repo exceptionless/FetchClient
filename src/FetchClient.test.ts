@@ -25,6 +25,9 @@ Deno.test("can getJSON with middleware", async () => {
   client.use(async (ctx, next) => {
     assert(ctx);
     assert(ctx.request);
+    assert(ctx.options.expectedStatusCodes);
+    assert(ctx.options.expectedStatusCodes.length > 0);
+    console.log(ctx.options.expectedStatusCodes);
     assertFalse(ctx.response);
     assert(globalLoading);
     called = true;
@@ -36,6 +39,9 @@ Deno.test("can getJSON with middleware", async () => {
   type Todo = { userId: number; id: number; title: string; completed: boolean };
   const r = await client.getJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
+    {
+      expectedStatusCodes: [404],
+    },
   );
   assert(r.ok);
   assertEquals(r.status, 200);
@@ -64,6 +70,7 @@ Deno.test("can postJSON with middleware", async () => {
   client.use(async (ctx, next) => {
     assert(ctx);
     assert(ctx.request);
+    assert(ctx.options);
     assertFalse(ctx.response);
     called = true;
     await next();
