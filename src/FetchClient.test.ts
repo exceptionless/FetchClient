@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertFalse } from "@std/assert";
 
 import {
+  cache,
   FetchClient,
   globalLoading,
   ProblemDetails,
@@ -27,7 +28,6 @@ Deno.test("can getJSON with middleware", async () => {
     assert(ctx.request);
     assert(ctx.options.expectedStatusCodes);
     assert(ctx.options.expectedStatusCodes.length > 0);
-    console.log(ctx.options.expectedStatusCodes);
     assertFalse(ctx.response);
     assert(globalLoading);
     called = true;
@@ -52,6 +52,118 @@ Deno.test("can getJSON with middleware", async () => {
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
   assertFalse(globalLoading);
+});
+
+Deno.test("can getJSON with caching", async () => {
+  let fetchCount = 0;
+  const fakeFetch = (): Promise<Response> =>
+    new Promise((resolve) => {
+      const data = JSON.stringify({
+        userId: 1,
+        id: 1,
+        title: "A random title",
+        completed: false,
+      });
+      fetchCount++;
+      assert(globalLoading);
+      resolve(new Response(data));
+    });
+  const client = new FetchClient(fakeFetch);
+  let called = false;
+  client.use(async (ctx, next) => {
+    assert(ctx);
+    assert(ctx.request);
+    assert(ctx.options.expectedStatusCodes);
+    assert(ctx.options.expectedStatusCodes.length > 0);
+    assertFalse(ctx.response);
+    assert(globalLoading);
+    called = true;
+    await next();
+    assert(ctx.response);
+  });
+  assert(client);
+
+  type Todo = { userId: number; id: number; title: string; completed: boolean };
+  let r = await client.getJSON<Todo>(
+    "https://jsonplaceholder.typicode.com/todos/1",
+    {
+      expectedStatusCodes: [404],
+      cacheKey: ["todos", "1"],
+    },
+  );
+  assert(r.ok);
+  assertEquals(r.status, 200);
+  assert(r.data);
+  assert(called);
+  assertEquals(r.data!.userId, 1);
+  assertEquals(r.data!.id, 1);
+  assertEquals(r.data!.title, "A random title");
+  assertFalse(r.data!.completed);
+  assertFalse(globalLoading);
+  assertEquals(fetchCount, 1);
+  assert(cache.has(["todos", "1"]));
+
+  r = await client.getJSON<Todo>(
+    "https://jsonplaceholder.typicode.com/todos/1",
+    {
+      expectedStatusCodes: [404],
+      cacheKey: ["todos", "1"],
+    },
+  );
+  assert(r.ok);
+  assertEquals(r.status, 200);
+  assert(r.data);
+  assert(called);
+  assertEquals(r.data!.userId, 1);
+  assertEquals(r.data!.id, 1);
+  assertEquals(r.data!.title, "A random title");
+  assertFalse(r.data!.completed);
+  assertFalse(globalLoading);
+  assertEquals(fetchCount, 1);
+  assert(cache.has(["todos", "1"]));
+
+  cache.delete(["todos", "1"]);
+
+  r = await client.getJSON<Todo>(
+    "https://jsonplaceholder.typicode.com/todos/1",
+    {
+      expectedStatusCodes: [404],
+      cacheKey: ["todos", "1"],
+      cacheDuration: 10,
+    },
+  );
+  assert(r.ok);
+  assertEquals(r.status, 200);
+  assert(r.data);
+  assert(called);
+  assertEquals(r.data!.userId, 1);
+  assertEquals(r.data!.id, 1);
+  assertEquals(r.data!.title, "A random title");
+  assertFalse(r.data!.completed);
+  assertFalse(globalLoading);
+  assertEquals(fetchCount, 2);
+  assert(cache.has(["todos", "1"]));
+
+  await delay(100);
+
+  r = await client.getJSON<Todo>(
+    "https://jsonplaceholder.typicode.com/todos/1",
+    {
+      expectedStatusCodes: [404],
+      cacheKey: ["todos", "1"],
+    },
+  );
+  assert(r.ok);
+  assertEquals(r.status, 200);
+  assert(r.data);
+  assert(called);
+  assertEquals(r.data!.userId, 1);
+  assertEquals(r.data!.id, 1);
+  assertEquals(r.data!.title, "A random title");
+  assertFalse(r.data!.completed);
+  assertFalse(globalLoading);
+  assertEquals(fetchCount, 3);
+  assert(cache.has(["todos", "1"]));
 });
 
 Deno.test("can postJSON with middleware", async () => {
@@ -310,3 +422,7 @@ Deno.test("can use global middleware", async () => {
   assertEquals(r.data!.title, "A random title");
   assertEquals(r.data!.completed, false);
 });
+
+function delay(time: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, time));
+}

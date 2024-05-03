@@ -1,10 +1,11 @@
 import { Counter } from "./Counter.ts";
-import type { RequestOptions } from "./RequestOptions.ts";
+import type { GetRequestOptions, RequestOptions } from "./RequestOptions.ts";
 import { ProblemDetails } from "./ProblemDetails.ts";
 import type { FetchClientResponse } from "./FetchClientResponse.ts";
 import type { FetchClientMiddleware, Next } from "./FetchClientMiddleware.ts";
 import type { FetchClientContext } from "./FetchClientContext.ts";
 import { parseLinkHeader } from "./LinkHeader.ts";
+import { FetchClientCache } from "./FetchClientCache.ts";
 
 type Fetch = typeof globalThis.fetch;
 
@@ -14,6 +15,8 @@ let defaultOptions: RequestOptions = {
 
 const globalRequestCount = new Counter((count) => globalLoading = count > 0);
 export let globalLoading: boolean = false;
+
+export const cache = new FetchClientCache();
 
 let getAccessToken: () => string | null = () => null;
 /**
@@ -117,7 +120,7 @@ export class FetchClient {
    */
   async get(
     url: string,
-    options?: RequestOptions,
+    options?: GetRequestOptions,
   ): Promise<FetchClientResponse<unknown>> {
     options = { ...defaultOptions, ...options };
     const response = await this.fetchInternal(
@@ -143,7 +146,7 @@ export class FetchClient {
    */
   getJSON<T>(
     url: string,
-    options?: RequestOptions,
+    options?: GetRequestOptions,
   ): Promise<FetchClientResponse<T>> {
     return this.get(url, options) as Promise<FetchClientResponse<T>>;
   }
@@ -377,6 +380,15 @@ export class FetchClient {
     }
 
     const fetchMiddleware = async (ctx: FetchClientContext, next: Next) => {
+      const getOptions = options as GetRequestOptions;
+      if (getOptions?.cacheKey) {
+        const cachedResponse = cache.get(getOptions.cacheKey);
+        if (cachedResponse) {
+          ctx.response = cachedResponse as FetchClientResponse<T>;
+          return;
+        }
+      }
+
       const response = await this.fetch(ctx.request);
       if (
         ctx.request.headers.get("Content-Type")?.startsWith(
@@ -397,6 +409,10 @@ export class FetchClient {
       ctx.response.meta = {
         links: parseLinkHeader(response.headers.get("Link")) || {},
       };
+
+      if (getOptions?.cacheKey) {
+        cache.set(getOptions.cacheKey, ctx.response, getOptions.cacheDuration);
+      }
 
       await next();
     };

@@ -1,5 +1,6 @@
 import type { FetchClientMiddleware } from "./FetchClientMiddleware.ts";
 import type { ProblemDetails } from "./ProblemDetails.ts";
+import type { CacheKey } from "./FetchClientCache.ts";
 
 /**
  * Represents the options for making a request using the FetchClient.
@@ -50,4 +51,9 @@ export type RequestOptions = {
    * An AbortSignal object that can be used to cancel the request.
    */
   signal?: AbortSignal;
+};
+
+export type GetRequestOptions = RequestOptions & {
+  cacheKey?: CacheKey;
+  cacheDuration?: number;
 };
