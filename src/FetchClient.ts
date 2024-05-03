@@ -16,7 +16,7 @@ let defaultOptions: RequestOptions = {
 const globalRequestCount = new Counter((count) => globalLoading = count > 0);
 export let globalLoading: boolean = false;
 
-export const cache = new FetchClientCache();
+export const cache: FetchClientCache = new FetchClientCache();
 
 let getAccessToken: () => string | null = () => null;
 /**
