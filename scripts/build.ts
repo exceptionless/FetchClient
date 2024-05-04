@@ -23,6 +23,10 @@ await build({
       type: "git",
       url: "git+https://github.com/exceptionless/fetchclient.git",
     },
+    homepage: "https://github.com/exceptionless/fetchclient#readme",
+    bugs: {
+      url: "https://github.com/exceptionless/fetchclient/issues",
+    },
     license: "Apache-2.0",
     description:
       "A simple fetch client with middleware support for Deno and the browser.",
