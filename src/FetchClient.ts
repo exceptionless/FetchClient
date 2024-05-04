@@ -553,7 +553,7 @@ export class FetchClient {
 
     const isAbsoluteUrl = url.startsWith("http");
 
-    const origin = isAbsoluteUrl
+    const origin: string | undefined = isAbsoluteUrl
       ? undefined
       : globalThis.window?.location?.origin ?? undefined;
 

@@ -45,7 +45,7 @@ jobs:
 
       - name: Tests
         run: |
-          deno test --coverage=cov/
+          deno test --allow-net --coverage=cov/
           deno coverage cov/
 
       - name: Publish Release Package
