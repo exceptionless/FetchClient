@@ -5,38 +5,91 @@ import type { FetchClientResponse } from "./FetchClientResponse.ts";
 import type { FetchClientMiddleware, Next } from "./FetchClientMiddleware.ts";
 import type { FetchClientContext } from "./FetchClientContext.ts";
 import { parseLinkHeader } from "./LinkHeader.ts";
-import { FetchClientProvider } from "./FetchClientProvider.ts";
-import { defaultProvider } from "../mod.ts";
+import { FetchClientCache } from "./FetchClientCache.ts";
 
 type Fetch = typeof globalThis.fetch;
+
+/**
+ * Fetch client options to use for making HTTP requests.
+ */
+export type FetchClientOptions = {
+  /**
+   * The default request options to use for requests. If specified, these options will be merged with the
+   * options from the FetchClientProvider and the options provided in each request.
+   */
+  defaultRequestOptions?: RequestOptions;
+
+  /**
+   * The cache to use for storing HTTP responses.
+   */
+  cache?: FetchClientCache;
+
+  /**
+   * The fetch implementation to use for making HTTP requests.
+   * If not provided, the global fetch function will be used.
+   */
+  fetch?: Fetch;
+
+  /**
+   * An array of middleware functions to be applied to the request.
+   */
+  middleware?: FetchClientMiddleware[];
+
+  /**
+   * The base URL for making HTTP requests.
+   */
+  baseUrl?: string;
+
+  /**
+   * A function that validates the model before making the request.
+   * Returns a Promise that resolves to a ProblemDetails object if validation fails, or null if validation succeeds.
+   */
+  modelValidator?: (model: object | null) => Promise<ProblemDetails | null>;
+
+  /**
+   * A function that returns the access token to use for making requests.
+   */
+  accessTokenFunc?: () => string | null;
+
+  /**
+   * Counter for tracking the number of inflight requests at the provider level
+   */
+  providerCounter?: Counter;
+};
 
 /**
  * Represents a client for making HTTP requests using the Fetch API.
  */
 export class FetchClient {
-  #provider: FetchClientProvider;
+  #options: FetchClientOptions;
+  #defaultRequestOptions?: RequestOptions;
+  #cache: FetchClientCache;
+  #fetch: Fetch;
   #middleware: FetchClientMiddleware[] = [];
   #counter = new Counter();
+  #providerCounter: Counter;
 
   /**
    * Represents a FetchClient that handles HTTP requests using the Fetch API.
-   * @param fetchOrProvider - An optional Fetch implementation to use for making HTTP requests. If not provided, the global `fetch` function will be used.
+   * @param options - The options to use for the FetchClient.
    */
-  constructor(fetchOrProvider?: Fetch | FetchClientProvider) {
-    if (fetchOrProvider instanceof FetchClientProvider) {
-      this.#provider = fetchOrProvider;
-    } else if (fetchOrProvider instanceof Function) {
-      this.#provider = new FetchClientProvider(fetchOrProvider);
-    } else {
-      this.#provider = defaultProvider;
+  constructor(options?: FetchClientOptions) {
+    this.#options = options ?? {};
+    this.#defaultRequestOptions = options?.defaultRequestOptions ?? {};
+    this.#cache = options?.cache ?? new FetchClientCache();
+    this.#fetch = options?.fetch ?? globalThis.fetch;
+    if (!this.#fetch) {
+      throw new Error("No fetch implementation available");
     }
+    this.#providerCounter = options?.providerCounter ?? new Counter();
+    this.use(...(options?.middleware ?? []));
   }
 
   /**
-   * Gets the number of inflight requests for this FetchClient instance.
+   * Gets the cache used for storing HTTP responses.
    */
-  public get provider(): FetchClientProvider {
-    return this.#provider;
+  public get cache(): FetchClientCache {
+    return this.#cache;
   }
 
   /**
@@ -75,7 +128,10 @@ export class FetchClient {
     url: string,
     options?: GetRequestOptions,
   ): Promise<FetchClientResponse<unknown>> {
-    options = { ...this.#provider.defaultOptions, ...options };
+    options = {
+      ...this.#defaultRequestOptions,
+      ...options,
+    };
     const response = await this.fetchInternal(
       url,
       options,
@@ -117,7 +173,10 @@ export class FetchClient {
     body?: object | string,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<unknown>> {
-    options = { ...this.#provider.defaultOptions, ...options };
+    options = {
+      ...this.#defaultRequestOptions,
+      ...options,
+    };
     const problem = await this.validate(body, options);
     if (problem) return this.problemToResponse(problem, url);
 
@@ -147,7 +206,10 @@ export class FetchClient {
     formData: FormData,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<unknown>> {
-    options = { ...this.#provider.defaultOptions, ...options };
+    options = {
+      ...this.#defaultRequestOptions,
+      ...options,
+    };
     const response = await this.fetchInternal(
       url,
       options,
@@ -190,7 +252,10 @@ export class FetchClient {
     body?: object | string,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<unknown>> {
-    options = { ...this.#provider.defaultOptions, ...options };
+    options = {
+      ...this.#defaultRequestOptions,
+      ...options,
+    };
     const problem = await this.validate(body, options);
     if (problem) return this.problemToResponse(problem, url);
 
@@ -236,7 +301,10 @@ export class FetchClient {
     body?: object | string,
     options?: RequestOptions,
   ): Promise<Response> {
-    options = { ...this.#provider.defaultOptions, ...options };
+    options = {
+      ...this.#defaultRequestOptions,
+      ...options,
+    };
     const problem = await this.validate(body, options);
     if (problem) return this.problemToResponse(problem, url);
 
@@ -281,7 +349,10 @@ export class FetchClient {
     url: string,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<unknown>> {
-    options = { ...this.#provider.defaultOptions, ...options };
+    options = {
+      ...this.#defaultRequestOptions,
+      ...options,
+    };
     return await this.fetchInternal(
       url,
       options,
@@ -301,11 +372,11 @@ export class FetchClient {
       (options && options.shouldValidateModel === false)
     ) return null;
 
-    if (options?.modelValidator === undefined) {
+    if (this.#options?.modelValidator === undefined) {
       return null;
     }
 
-    const problem = await options.modelValidator(data as object);
+    const problem = await this.#options.modelValidator(data as object);
     if (!problem) return null;
 
     return problem;
@@ -318,7 +389,7 @@ export class FetchClient {
   ): Promise<FetchClientResponse<T>> {
     url = this.buildUrl(url, options);
 
-    const accessToken = this.#provider.accessToken;
+    const accessToken = this.#options.accessTokenFunc?.() ?? null;
     if (accessToken !== null) {
       init = {
         ...init,
@@ -333,16 +404,16 @@ export class FetchClient {
     }
 
     const fetchMiddleware = async (ctx: FetchClientContext, next: Next) => {
-      const getOptions = options as GetRequestOptions;
+      const getOptions = ctx.options as GetRequestOptions;
       if (getOptions?.cacheKey) {
-        const cachedResponse = this.#provider.cache.get(getOptions.cacheKey);
+        const cachedResponse = this.#cache.get(getOptions.cacheKey);
         if (cachedResponse) {
           ctx.response = cachedResponse as FetchClientResponse<T>;
           return;
         }
       }
 
-      const response = await this.#provider.fetch(ctx.request);
+      const response = await this.#fetch(ctx.request);
       if (
         ctx.request.headers.get("Content-Type")?.startsWith(
           "application/json",
@@ -364,7 +435,7 @@ export class FetchClient {
       };
 
       if (getOptions?.cacheKey) {
-        this.#provider.cache.set(
+        this.#cache.set(
           getOptions.cacheKey,
           ctx.response,
           getOptions.cacheDuration,
@@ -375,12 +446,11 @@ export class FetchClient {
     };
     const middleware = [
       ...this.#middleware,
-      ...(options?.middleware ?? []),
       fetchMiddleware,
     ];
 
     this.#counter.increment();
-    this.#provider.counter.increment();
+    this.#providerCounter.increment();
 
     const context: FetchClientContext = {
       options,
@@ -391,7 +461,7 @@ export class FetchClient {
     await this.invokeMiddleware(context, middleware);
 
     this.#counter.decrement();
-    this.#provider.counter.decrement();
+    this.#providerCounter.decrement();
 
     this.validateResponse(context.response, options);
 
@@ -473,17 +543,20 @@ export class FetchClient {
   }
 
   private buildUrl(url: string, options: RequestOptions | undefined): string {
-    const isAbsoluteUrl = url.startsWith("http");
-
     if (url.startsWith("/")) {
       url = url.substring(1);
     }
 
-    if (!url.startsWith("http") && options?.baseUrl) {
-      url = options.baseUrl + "/" + url;
+    if (!url.startsWith("http") && this.#options?.baseUrl) {
+      url = this.#options.baseUrl + "/" + url;
     }
 
-    const origin = isAbsoluteUrl ? undefined : window.location.origin ?? "";
+    const isAbsoluteUrl = url.startsWith("http");
+
+    const origin = isAbsoluteUrl
+      ? undefined
+      : globalThis.window?.location?.origin ?? undefined;
+
     const parsed = new URL(url, origin);
 
     if (options?.params) {
@@ -496,7 +569,8 @@ export class FetchClient {
       url = parsed.toString();
     }
 
-    return isAbsoluteUrl ? url : `${parsed.pathname}${parsed.search}`;
+    const result = isAbsoluteUrl ? url : `${parsed.pathname}${parsed.search}`;
+    return result;
   }
 
   private validateResponse(

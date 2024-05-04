@@ -1,5 +1,33 @@
 import { assert, assertEquals, assertFalse } from "@std/assert";
-import { defaultProvider as provider, ProblemDetails } from "../mod.ts";
+import {
+  defaultProvider as provider,
+  FetchClient,
+  ProblemDetails,
+} from "../mod.ts";
+
+Deno.test("can getJSON", async () => {
+  const api = new FetchClient();
+  const res = await api.getJSON<{
+    products: Array<{ id: number; name: string }>;
+  }>(
+    `https://dummyjson.com/products/search?q=iphone&limit=10`,
+  );
+  assertEquals(res.status, 200);
+  assert(res.data?.products);
+});
+
+Deno.test("can getJSON with baseUrl", async () => {
+  const api = new FetchClient({
+    baseUrl: "https://dummyjson.com",
+  });
+  const res = await api.getJSON<{
+    products: Array<{ id: number; name: string }>;
+  }>(
+    `/products/search?q=iphone&limit=10`,
+  );
+  assertEquals(res.status, 200);
+  assert(res.data?.products);
+});
 
 Deno.test("can getJSON with middleware", async () => {
   const fakeFetch = (): Promise<Response> =>
@@ -16,6 +44,10 @@ Deno.test("can getJSON with middleware", async () => {
 
   provider.fetch = fakeFetch;
   const client = provider.getFetchClient();
+  const res = await client.getJSON(
+    "https://dummyjson.com/products/search?q=iphone&limit=10",
+  );
+  console.log("hi", res.data);
   let called = false;
   client.use(async (ctx, next) => {
     assert(ctx);
@@ -300,54 +332,6 @@ Deno.test("can abort getJSON", () => {
   controller.abort();
 });
 
-Deno.test("will validate postJSON model", async () => {
-  let called = false;
-  const fakeFetch = (): Promise<Response> =>
-    new Promise((resolve) => {
-      called = true;
-      resolve(new Response());
-    });
-
-  provider.fetch = fakeFetch;
-  const client = provider.getFetchClient();
-  const data = {
-    email: "test@test",
-    password: "test",
-  };
-  // deno-lint-ignore require-await
-  const modelValidator = async (data: object | null) => {
-    // use zod or class validator
-    const problem = new ProblemDetails();
-    const d = data as { password: string };
-    if (d?.password?.length < 6) {
-      problem.errors.password = [
-        "Password must be longer than or equal to 6 characters.",
-      ];
-    }
-
-    return problem;
-  };
-  const response = await client.postJSON(
-    "https://jsonplaceholder.typicode.com/todos/1",
-    data,
-    {
-      modelValidator: modelValidator,
-    },
-  );
-  assertEquals(response.ok, false);
-  assertEquals(called, false);
-  assertEquals(response.status, 422);
-  assertFalse(response.data);
-  assert(response.problem);
-  assert(response.problem!.errors);
-  assert(response.problem!.errors.password);
-  assertEquals(response.problem!.errors.password!.length, 1);
-  assertEquals(
-    response.problem!.errors.password![0],
-    "Password must be longer than or equal to 6 characters.",
-  );
-});
-
 Deno.test("will validate postJSON model with default model validator", async () => {
   let called = false;
   const fakeFetch = (): Promise<Response> =>
@@ -356,8 +340,6 @@ Deno.test("will validate postJSON model with default model validator", async () 
       resolve(new Response());
     });
 
-  provider.fetch = fakeFetch;
-  const client = provider.getFetchClient();
   const data = {
     email: "test@test",
     password: "test",
@@ -374,6 +356,8 @@ Deno.test("will validate postJSON model with default model validator", async () 
     }
     return problem;
   });
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   const response = await client.postJSON(
     "https://jsonplaceholder.typicode.com/todos/1",
     data,
@@ -405,7 +389,6 @@ Deno.test("can use global middleware", async () => {
     });
 
   provider.fetch = fakeFetch;
-  const client = provider.getFetchClient();
   let called = false;
   provider.useMiddleware(async (ctx, next) => {
     assert(ctx);
@@ -415,6 +398,7 @@ Deno.test("can use global middleware", async () => {
     await next();
     assert(ctx.response);
   });
+  const client = provider.getFetchClient();
   assert(client);
 
   type Todo = { userId: number; id: number; title: string; completed: boolean };

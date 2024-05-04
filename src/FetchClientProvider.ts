@@ -1,5 +1,4 @@
-import { FetchClient } from "./FetchClient.ts";
-import type { RequestOptions } from "./RequestOptions.ts";
+import { FetchClient, type FetchClientOptions } from "./FetchClient.ts";
 import { Counter } from "./Counter.ts";
 import type { FetchClientMiddleware } from "./FetchClientMiddleware.ts";
 import type { ProblemDetails } from "./ProblemDetails.ts";
@@ -11,8 +10,7 @@ type Fetch = typeof globalThis.fetch;
  * Represents a provider for creating instances of the FetchClient class with shared default options and cache.
  */
 export class FetchClientProvider {
-  #getAccessToken: () => string | null = () => null;
-  #defaultOptions: RequestOptions = {};
+  #options: FetchClientOptions = {};
   #fetch: Fetch;
   #cache: FetchClientCache;
   #counter = new Counter();
@@ -24,6 +22,20 @@ export class FetchClientProvider {
   constructor(fetch?: Fetch) {
     this.#cache = new FetchClientCache();
     this.#fetch = fetch ?? globalThis.fetch;
+  }
+
+  /**
+   * Gets the fetch function used for making requests.
+   */
+  public get fetch(): Fetch {
+    return this.#fetch;
+  }
+
+  /**
+   * Sets the fetch function used for making requests.
+   */
+  public set fetch(value: Fetch) {
+    this.#fetch = value;
   }
 
   /**
@@ -41,31 +53,17 @@ export class FetchClientProvider {
   }
 
   /**
-   * Gets the ongoing request counter.
+   * Gets the options used for FetchClient instances.
    */
-  public get counter(): Counter {
-    return this.#counter;
+  public get options(): FetchClientOptions {
+    return this.#options;
   }
 
   /**
-   * Gets the default options used for FetchClient instances.
+   * Sets the options used for FetchClient instances.
    */
-  public get defaultOptions(): RequestOptions {
-    return this.#defaultOptions;
-  }
-
-  /**
-   * Gets the fetch function used for making HTTP requests.
-   */
-  public get fetch(): Fetch {
-    return this.#fetch;
-  }
-
-  /**
-   * Sets the fetch function used for making HTTP requests.
-   */
-  public set fetch(value: Fetch) {
-    this.#fetch = value;
+  public set options(value: FetchClientOptions) {
+    this.#options = value;
   }
 
   /**
@@ -76,18 +74,30 @@ export class FetchClientProvider {
   }
 
   /**
-   * Gets the access token used for authentication.
-   */
-  public get accessToken(): string | null {
-    return this.#getAccessToken();
-  }
-
-  /**
    * Creates a new instance of FetchClient using the current provider.
    * @returns A new instance of FetchClient.
    */
   public getFetchClient(): FetchClient {
-    return new FetchClient(this);
+    return new FetchClient({
+      defaultRequestOptions: this.#options.defaultRequestOptions,
+      baseUrl: this.#options.baseUrl,
+      cache: this.#cache,
+      fetch: this.#fetch,
+      middleware: this.#options.middleware,
+      modelValidator: this.#options.modelValidator,
+      accessTokenFunc: this.#options.accessTokenFunc,
+      providerCounter: this.#counter,
+    });
+  }
+
+  /**
+   * Applies the specified options by merging with the current options.
+   */
+  public applyOptions(options: FetchClientOptions) {
+    this.#options = {
+      ...this.#options,
+      ...options,
+    };
   }
 
   /**
@@ -95,15 +105,10 @@ export class FetchClientProvider {
    * @param accessTokenFunc - The function that retrieves the access token.
    */
   public setAccessTokenFunc(accessTokenFunc: () => string | null) {
-    this.#getAccessToken = accessTokenFunc;
-  }
-
-  /**
-   * Sets the default request options used for creating FetchClient instances.
-   * @param options - The default request options.
-   */
-  public setDefaultRequestOptions(options: RequestOptions) {
-    this.#defaultOptions = { ...this.#defaultOptions, ...options };
+    this.#options = {
+      ...this.#options,
+      accessTokenFunc: accessTokenFunc,
+    };
   }
 
   /**
@@ -113,8 +118,8 @@ export class FetchClientProvider {
   public setDefaultModelValidator(
     validate: (model: object | null) => Promise<ProblemDetails | null>,
   ) {
-    this.#defaultOptions = {
-      ...this.#defaultOptions,
+    this.#options = {
+      ...this.#options,
       modelValidator: validate,
     };
   }
@@ -124,7 +129,10 @@ export class FetchClientProvider {
    * @param url - The URL to set as the default base URL.
    */
   public setDefaultBaseUrl(url: string) {
-    this.#defaultOptions = { ...this.#defaultOptions, baseUrl: url };
+    this.#options = {
+      ...this.#options,
+      baseUrl: url,
+    };
   }
 
   /**
@@ -132,9 +140,12 @@ export class FetchClientProvider {
    * @param middleware - The middleware function to be added.
    */
   public useMiddleware(middleware: FetchClientMiddleware) {
-    this.#defaultOptions = {
-      ...this.#defaultOptions,
-      middleware: [...(this.#defaultOptions.middleware ?? []), middleware],
+    this.#options = {
+      ...this.#options,
+      middleware: [
+        ...(this.#options.middleware ?? []),
+        middleware,
+      ],
     };
   }
 }
