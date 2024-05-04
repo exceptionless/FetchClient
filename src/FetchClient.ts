@@ -6,6 +6,7 @@ import type { FetchClientMiddleware, Next } from "./FetchClientMiddleware.ts";
 import type { FetchClientContext } from "./FetchClientContext.ts";
 import { parseLinkHeader } from "./LinkHeader.ts";
 import { FetchClientProvider } from "./FetchClientProvider.ts";
+import { defaultProvider } from "../mod.ts";
 
 type Fetch = typeof globalThis.fetch;
 
@@ -19,13 +20,15 @@ export class FetchClient {
 
   /**
    * Represents a FetchClient that handles HTTP requests using the Fetch API.
-   * @param fetch - An optional Fetch implementation to use for making HTTP requests. If not provided, the global `fetch` function will be used.
+   * @param fetchOrProvider - An optional Fetch implementation to use for making HTTP requests. If not provided, the global `fetch` function will be used.
    */
   constructor(fetchOrProvider?: Fetch | FetchClientProvider) {
     if (fetchOrProvider instanceof FetchClientProvider) {
       this.#provider = fetchOrProvider;
-    } else {
+    } else if (fetchOrProvider instanceof Function) {
       this.#provider = new FetchClientProvider(fetchOrProvider);
+    } else {
+      this.#provider = defaultProvider;
     }
   }
 

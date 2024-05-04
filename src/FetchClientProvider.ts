@@ -137,9 +137,4 @@ export class FetchClientProvider {
       middleware: [...(this.#defaultOptions.middleware ?? []), middleware],
     };
   }
-
-  /**
-   * A global default instance of the FetchClientProvider.
-   */
-  public static globalDefault: FetchClientProvider = new FetchClientProvider();
 }

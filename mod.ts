@@ -10,14 +10,14 @@ export type { FetchClientMiddleware } from "./src/FetchClientMiddleware.ts";
 export type { FetchClientContext } from "./src/FetchClientContext.ts";
 export { FetchClientProvider } from "./src/FetchClientProvider.ts";
 
+const provider = new FetchClientProvider();
+
 /**
  * A global singleton instance of the FetchClient.
  */
-export const instance: FetchClient = FetchClientProvider.globalDefault
-  .getFetchClient();
+export const instance: FetchClient = provider.getFetchClient();
 
 /**
  * A global default singleton instance of the FetchClientProvider.
  */
-export const defaultProvider: FetchClientProvider =
-  FetchClientProvider.globalDefault;
+export const defaultProvider: FetchClientProvider = provider;
