@@ -64,7 +64,7 @@ export class FetchClient {
   #options: FetchClientOptions;
   #defaultRequestOptions?: RequestOptions;
   #cache: FetchClientCache;
-  #fetch: Fetch;
+  #fetch?: Fetch;
   #middleware: FetchClientMiddleware[] = [];
   #counter = new Counter();
   #providerCounter: Counter;
@@ -77,7 +77,7 @@ export class FetchClient {
     this.#options = options ?? {};
     this.#defaultRequestOptions = options?.defaultRequestOptions ?? {};
     this.#cache = options?.cache ?? new FetchClientCache();
-    this.#fetch = options?.fetch ?? globalThis.fetch;
+    this.#fetch = options?.fetch;
     if (!this.#fetch) {
       throw new Error("No fetch implementation available");
     }
@@ -413,7 +413,8 @@ export class FetchClient {
         }
       }
 
-      const response = await this.#fetch(ctx.request);
+      const f = this.#fetch ?? globalThis.fetch.bind(globalThis);
+      const response = await f(ctx.request);
       if (
         ctx.request.headers.get("Content-Type")?.startsWith(
           "application/json",

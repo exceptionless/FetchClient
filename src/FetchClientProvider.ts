@@ -11,7 +11,7 @@ type Fetch = typeof globalThis.fetch;
  */
 export class FetchClientProvider {
   #options: FetchClientOptions = {};
-  #fetch: Fetch;
+  #fetch?: Fetch;
   #cache: FetchClientCache;
   #counter = new Counter();
 
@@ -21,13 +21,13 @@ export class FetchClientProvider {
    */
   constructor(fetch?: Fetch) {
     this.#cache = new FetchClientCache();
-    this.#fetch = fetch ?? globalThis.fetch;
+    this.#fetch = fetch;
   }
 
   /**
    * Gets the fetch function used for making requests.
    */
-  public get fetch(): Fetch {
+  public get fetch(): Fetch | undefined {
     return this.#fetch;
   }
 
@@ -82,7 +82,7 @@ export class FetchClientProvider {
       defaultRequestOptions: this.#options.defaultRequestOptions,
       baseUrl: this.#options.baseUrl,
       cache: this.#cache,
-      fetch: this.#fetch,
+      fetch: this.fetch,
       middleware: this.#options.middleware,
       modelValidator: this.#options.modelValidator,
       accessTokenFunc: this.#options.accessTokenFunc,
