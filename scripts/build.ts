@@ -19,7 +19,10 @@ await build({
   package: {
     name: "fetchclient",
     version: Deno.args[0],
-    repository: "exceptionless/fetchclient",
+    repository: {
+      type: "git",
+      url: "git+https://github.com/exceptionless/fetchclient.git",
+    },
     license: "Apache-2.0",
     description:
       "A simple fetch client with middleware support for Deno and the browser.",
