@@ -17,7 +17,7 @@ await build({
   importMap: "deno.json",
 
   package: {
-    name: "fetchclient",
+    name: "@exceptionless/fetchclient",
     version: Deno.args[0],
     repository: {
       type: "git",
