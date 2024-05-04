@@ -555,7 +555,7 @@ export class FetchClient {
 
     const origin: string | undefined = isAbsoluteUrl
       ? undefined
-      : globalThis.window?.location?.origin ?? undefined;
+      : globalThis.location?.origin ?? undefined;
 
     const parsed = new URL(url, origin);
 
