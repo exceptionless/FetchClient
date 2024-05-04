@@ -1,13 +1,5 @@
 import { assert, assertEquals, assertFalse } from "@std/assert";
-
-import {
-  cache,
-  FetchClient,
-  globalLoading,
-  ProblemDetails,
-  setDefaultModelValidator,
-  useGlobalMiddleware,
-} from "../mod.ts";
+import { defaultProvider as provider, ProblemDetails } from "../mod.ts";
 
 Deno.test("can getJSON with middleware", async () => {
   const fakeFetch = (): Promise<Response> =>
@@ -18,10 +10,12 @@ Deno.test("can getJSON with middleware", async () => {
         title: "A random title",
         completed: false,
       });
-      assert(globalLoading);
+      assert(provider.isLoading);
       resolve(new Response(data));
     });
-  const client = new FetchClient(fakeFetch);
+
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   let called = false;
   client.use(async (ctx, next) => {
     assert(ctx);
@@ -29,7 +23,7 @@ Deno.test("can getJSON with middleware", async () => {
     assert(ctx.options.expectedStatusCodes);
     assert(ctx.options.expectedStatusCodes.length > 0);
     assertFalse(ctx.response);
-    assert(globalLoading);
+    assert(provider.isLoading);
     called = true;
     await next();
     assert(ctx.response);
@@ -51,7 +45,7 @@ Deno.test("can getJSON with middleware", async () => {
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
-  assertFalse(globalLoading);
+  assertFalse(provider.isLoading);
 });
 
 Deno.test("can getJSON with caching", async () => {
@@ -65,10 +59,12 @@ Deno.test("can getJSON with caching", async () => {
         completed: false,
       });
       fetchCount++;
-      assert(globalLoading);
+      assert(provider.isLoading);
       resolve(new Response(data));
     });
-  const client = new FetchClient(fakeFetch);
+
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   let called = false;
   client.use(async (ctx, next) => {
     assert(ctx);
@@ -76,7 +72,7 @@ Deno.test("can getJSON with caching", async () => {
     assert(ctx.options.expectedStatusCodes);
     assert(ctx.options.expectedStatusCodes.length > 0);
     assertFalse(ctx.response);
-    assert(globalLoading);
+    assert(provider.isLoading);
     called = true;
     await next();
     assert(ctx.response);
@@ -99,9 +95,9 @@ Deno.test("can getJSON with caching", async () => {
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
-  assertFalse(globalLoading);
+  assertFalse(provider.isLoading);
   assertEquals(fetchCount, 1);
-  assert(cache.has(["todos", "1"]));
+  assert(provider.cache.has(["todos", "1"]));
 
   r = await client.getJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
@@ -118,11 +114,11 @@ Deno.test("can getJSON with caching", async () => {
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
-  assertFalse(globalLoading);
+  assertFalse(provider.isLoading);
   assertEquals(fetchCount, 1);
-  assert(cache.has(["todos", "1"]));
+  assert(provider.cache.has(["todos", "1"]));
 
-  cache.delete(["todos", "1"]);
+  provider.cache.delete(["todos", "1"]);
 
   r = await client.getJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
@@ -140,9 +136,9 @@ Deno.test("can getJSON with caching", async () => {
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
-  assertFalse(globalLoading);
+  assertFalse(provider.isLoading);
   assertEquals(fetchCount, 2);
-  assert(cache.has(["todos", "1"]));
+  assert(provider.cache.has(["todos", "1"]));
 
   await delay(100);
 
@@ -161,9 +157,9 @@ Deno.test("can getJSON with caching", async () => {
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
-  assertFalse(globalLoading);
+  assertFalse(provider.isLoading);
   assertEquals(fetchCount, 3);
-  assert(cache.has(["todos", "1"]));
+  assert(provider.cache.has(["todos", "1"]));
 });
 
 Deno.test("can postJSON with middleware", async () => {
@@ -177,7 +173,9 @@ Deno.test("can postJSON with middleware", async () => {
       });
       resolve(new Response(data));
     });
-  const client = new FetchClient(fakeFetch);
+
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   let called = false;
   client.use(async (ctx, next) => {
     assert(ctx);
@@ -215,7 +213,9 @@ Deno.test("can putJSON with middleware", async () => {
       });
       resolve(new Response(data));
     });
-  const client = new FetchClient(fakeFetch);
+
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   let called = false;
   client.use(async (ctx, next) => {
     assert(ctx);
@@ -246,7 +246,9 @@ Deno.test("can delete with middleware", async () => {
     new Promise((resolve) => {
       resolve(new Response());
     });
-  const client = new FetchClient(fakeFetch);
+
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   let called = false;
   client.use(async (ctx, next) => {
     assert(ctx);
@@ -283,7 +285,9 @@ Deno.test("can abort getJSON", () => {
         resolve(new Response());
       }, 1000);
     });
-  const client = new FetchClient(fakeFetch);
+
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   client
     .getJSON("https://jsonplaceholder.typicode.com/todos/1", {
       signal: controller.signal,
@@ -304,7 +308,8 @@ Deno.test("will validate postJSON model", async () => {
       resolve(new Response());
     });
 
-  const client = new FetchClient(fakeFetch);
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   const data = {
     email: "test@test",
     password: "test",
@@ -351,13 +356,14 @@ Deno.test("will validate postJSON model with default model validator", async () 
       resolve(new Response());
     });
 
-  const client = new FetchClient(fakeFetch);
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   const data = {
     email: "test@test",
     password: "test",
   };
   // deno-lint-ignore require-await
-  setDefaultModelValidator(async (data: object | null) => {
+  provider.setDefaultModelValidator(async (data: object | null) => {
     // use zod or class validator
     const problem = new ProblemDetails();
     const d = data as { password: string };
@@ -397,9 +403,11 @@ Deno.test("can use global middleware", async () => {
       });
       resolve(new Response(data));
     });
-  const client = new FetchClient(fakeFetch);
+
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   let called = false;
-  useGlobalMiddleware(async (ctx, next) => {
+  provider.useMiddleware(async (ctx, next) => {
     assert(ctx);
     assert(ctx.request);
     assertFalse(ctx.response);

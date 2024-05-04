@@ -53,7 +53,17 @@ export type RequestOptions = {
   signal?: AbortSignal;
 };
 
+/**
+ * Represents the options for a GET request.
+ */
 export type GetRequestOptions = RequestOptions & {
+  /**
+   * The cache key for the request.
+   */
   cacheKey?: CacheKey;
+
+  /**
+   * The duration for which the response should be cached, in milliseconds.
+   */
   cacheDuration?: number;
 };
