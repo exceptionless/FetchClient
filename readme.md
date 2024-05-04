@@ -1,9 +1,11 @@
 <!-- deno-fmt-ignore-file -->
 # FetchClient [![CI](https://github.com/exceptionless/fetchclient/workflows/CI/badge.svg)](https://github.com/exceptionless/fetchclient/actions?query=workflow%3ACI) [![JSR](https://jsr.io/badges/@exceptionless/fetchclient)](https://jsr.io/@exceptionless/fetchclient)
 
-* Wrap fetch and make it easier to use
-* Add middleware support
-* Add Problem Details support
+* Makes fetch easier to use for JSON APIs
+* Automatic model validation
+* Caching
+* Middleware
+* Problem Details support
 
 ## Install
 
