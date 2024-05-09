@@ -80,10 +80,11 @@ export class FetchClientProvider {
 
   /**
    * Creates a new instance of FetchClient using the current provider.
+   * @param options - The options to use for the new FetchClient instance. Options provided here will override the default options set on the provider.
    * @returns A new instance of FetchClient.
    */
-  public getFetchClient(): FetchClient {
-    return new FetchClient({
+  public getFetchClient(options?: FetchClientOptions): FetchClient {
+    const o = {
       defaultRequestOptions: this.#options.defaultRequestOptions,
       baseUrl: this.#options.baseUrl,
       cache: this.#cache,
@@ -92,7 +93,9 @@ export class FetchClientProvider {
       modelValidator: this.#options.modelValidator,
       accessTokenFunc: this.#options.accessTokenFunc,
       providerCounter: this.#counter,
-    });
+    };
+    options = { ...o, ...options };
+    return new FetchClient(options);
   }
 
   /**

@@ -121,6 +121,16 @@ export class FetchClient {
   }
 
   /**
+   * Adds one or more middleware functions to the FetchClient's middleware pipeline.
+   * Middleware functions are executed in the order they are added.
+   *
+   * @param mw - The middleware functions to add.
+   */
+  public use(...mw: FetchClientMiddleware[]): void {
+    this.#middleware.push(...mw);
+  }
+
+  /**
    * Sends a GET request to the specified URL.
    *
    * @param url - The URL to send the GET request to.

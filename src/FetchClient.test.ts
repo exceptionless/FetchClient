@@ -1,6 +1,5 @@
 import { assert, assertEquals, assertFalse } from "@std/assert";
 import {
-  defaultProvider,
   defaultProvider as provider,
   FetchClient,
   ProblemDetails,
