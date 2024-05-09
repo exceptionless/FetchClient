@@ -2,7 +2,7 @@ import {
   defaultInstance,
   type FetchClientProvider,
 } from "./src/FetchClientProvider.ts";
-import type { FetchClient } from "./src/FetchClient.ts";
+import type { FetchClient, FetchClientOptions } from "./src/FetchClient.ts";
 import type { FetchClientMiddleware } from "./src/FetchClientMiddleware.ts";
 import type { ProblemDetails } from "./src/ProblemDetails.ts";
 
@@ -25,20 +25,46 @@ export const instance: FetchClient = defaultInstance.getFetchClient();
  */
 export const defaultProvider: FetchClientProvider = defaultInstance;
 
+/**
+ * Sets the default base URL for the FetchClient.
+ * @param baseUrl - The base URL to use for requests.
+ */
 export function setDefaultBaseUrl(baseUrl: string) {
   defaultProvider.setDefaultBaseUrl(baseUrl);
 }
 
-export function setAccessTokenFunc(accessTokenFunc: () => string | null) {
+/**
+ * Sets the default access token function for the FetchClient.
+ * @param accessTokenFunc - The function that retrieves the access token.
+ */
+export function setDefaultAccessTokenFunc(
+  accessTokenFunc: () => string | null,
+) {
   defaultProvider.setAccessTokenFunc(accessTokenFunc);
 }
 
+/**
+ * Sets the default model validator function for the FetchClient.
+ * @param validate - The function that validates the model.
+ */
 export function setDefaultModelValidator(
   validate: (model: object | null) => Promise<ProblemDetails | null>,
 ) {
   defaultProvider.setDefaultModelValidator(validate);
 }
 
-export function useGlobalMiddleware(middleware: FetchClientMiddleware) {
+/**
+ * Adds a middleware to the FetchClient.
+ * @param middleware - The middleware function to be added.
+ */
+export function useDefaultMiddleware(middleware: FetchClientMiddleware) {
   defaultProvider.useMiddleware(middleware);
+}
+
+/**
+ * Sets the default request options for the FetchClient.
+ * @param options - The options to set as the default request options.
+ */
+export function setDefaultRequestOptions(options: FetchClientOptions) {
+  defaultProvider.applyOptions(options);
 }
