@@ -22,6 +22,11 @@ export class FetchClientProvider {
   constructor(fetch?: Fetch) {
     this.#cache = new FetchClientCache();
     this.#fetch = fetch;
+    this.#options = {
+      cache: this.#cache,
+      providerCounter: this.#counter,
+      fetch: this.#fetch,
+    };
   }
 
   /**
@@ -149,3 +154,6 @@ export class FetchClientProvider {
     };
   }
 }
+
+const provider = new FetchClientProvider();
+export const defaultInstance: FetchClientProvider = provider;

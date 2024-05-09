@@ -6,6 +6,10 @@ import type { FetchClientMiddleware, Next } from "./FetchClientMiddleware.ts";
 import type { FetchClientContext } from "./FetchClientContext.ts";
 import { parseLinkHeader } from "./LinkHeader.ts";
 import { FetchClientCache } from "./FetchClientCache.ts";
+import {
+  defaultInstance,
+  type FetchClientProvider,
+} from "./FetchClientProvider.ts";
 
 type Fetch = typeof globalThis.fetch;
 
@@ -13,6 +17,11 @@ type Fetch = typeof globalThis.fetch;
  * Fetch client options to use for making HTTP requests.
  */
 export type FetchClientOptions = {
+  /**
+   * The fetch client provider to get shared options from. Any options specified in this options class will override the provider options.
+   */
+  provider?: FetchClientProvider;
+
   /**
    * The default request options to use for requests. If specified, these options will be merged with the
    * options from the FetchClientProvider and the options provided in each request.
@@ -74,12 +83,19 @@ export class FetchClient {
    * @param options - The options to use for the FetchClient.
    */
   constructor(options?: FetchClientOptions) {
-    this.#options = options ?? {};
-    this.#defaultRequestOptions = options?.defaultRequestOptions ?? {};
-    this.#cache = options?.cache ?? new FetchClientCache();
-    this.#fetch = options?.fetch;
-    this.#providerCounter = options?.providerCounter ?? new Counter();
-    this.use(...(options?.middleware ?? []));
+    options = options ?? {};
+    options.provider ??= defaultInstance;
+    options = {
+      ...options.provider.options,
+      ...options,
+    };
+
+    this.#options = options;
+    this.#defaultRequestOptions = options.defaultRequestOptions ?? {};
+    this.#cache = options.cache ?? new FetchClientCache();
+    this.#fetch = options.fetch;
+    this.#providerCounter = options.providerCounter ?? new Counter();
+    this.#middleware.push(...(options.middleware ?? []));
   }
 
   /**
@@ -102,16 +118,6 @@ export class FetchClient {
    */
   public get loading(): boolean {
     return this.requestCount > 0;
-  }
-
-  /**
-   * Adds one or more middleware functions to the FetchClient's middleware pipeline.
-   * Middleware functions are executed in the order they are added.
-   *
-   * @param mw - The middleware functions to add.
-   */
-  public use(...mw: FetchClientMiddleware[]): void {
-    this.#middleware.push(...mw);
   }
 
   /**

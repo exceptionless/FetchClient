@@ -1,8 +1,10 @@
 import { assert, assertEquals, assertFalse } from "@std/assert";
 import {
+  defaultProvider,
   defaultProvider as provider,
   FetchClient,
   ProblemDetails,
+  setDefaultBaseUrl,
 } from "../mod.ts";
 
 Deno.test("can getJSON", async () => {
@@ -413,6 +415,19 @@ Deno.test("can use global middleware", async () => {
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertEquals(r.data!.completed, false);
+});
+
+Deno.test("can use defaultProvider", async () => {
+  setDefaultBaseUrl("https://dummyjson.com");
+
+  const api = new FetchClient();
+  const res = await api.getJSON<{
+    products: Array<{ id: number; name: string }>;
+  }>(
+    `products/search?q=iphone&limit=10`,
+  );
+  assertEquals(res.status, 200);
+  assert(res.data?.products);
 });
 
 function delay(time: number): Promise<void> {
