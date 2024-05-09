@@ -2,9 +2,10 @@ import {
   defaultInstance,
   type FetchClientProvider,
 } from "./src/FetchClientProvider.ts";
-import type { FetchClient, FetchClientOptions } from "./src/FetchClient.ts";
+import type { FetchClient } from "./src/FetchClient.ts";
 import type { FetchClientMiddleware } from "./src/FetchClientMiddleware.ts";
 import type { ProblemDetails } from "./src/ProblemDetails.ts";
+import type { RequestOptions } from "./src/RequestOptions.ts";
 
 export * from "./src/FetchClient.ts";
 export type { FetchClientResponse } from "./src/FetchClientResponse.ts";
@@ -65,6 +66,6 @@ export function useDefaultMiddleware(middleware: FetchClientMiddleware) {
  * Sets the default request options for the FetchClient.
  * @param options - The options to set as the default request options.
  */
-export function setDefaultRequestOptions(options: FetchClientOptions) {
-  defaultProvider.applyOptions(options);
+export function setDefaultRequestOptions(options: RequestOptions) {
+  defaultProvider.applyOptions({ defaultRequestOptions: options });
 }
