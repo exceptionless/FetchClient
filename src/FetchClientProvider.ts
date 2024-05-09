@@ -21,7 +21,10 @@ export class FetchClientProvider {
    */
   constructor(fetch?: Fetch) {
     this.#cache = new FetchClientCache();
-    this.#fetch = fetch;
+    if (fetch) {
+      this.#fetch = fetch;
+    }
+
     this.#options = {
       cache: this.#cache,
       providerCounter: this.#counter,
@@ -39,7 +42,7 @@ export class FetchClientProvider {
   /**
    * Sets the fetch function used for making requests.
    */
-  public set fetch(value: Fetch) {
+  public set fetch(value: Fetch | undefined) {
     this.#fetch = value;
   }
 
@@ -55,6 +58,13 @@ export class FetchClientProvider {
    */
   public get requestCount(): number {
     return this.#counter.count;
+  }
+
+  /**
+   * Gets the counter used for tracking ongoing requests.
+   */
+  public get counter(): Counter {
+    return this.#counter;
   }
 
   /**
@@ -80,22 +90,10 @@ export class FetchClientProvider {
 
   /**
    * Creates a new instance of FetchClient using the current provider.
-   * @param options - The options to use for the new FetchClient instance. Options provided here will override the default options set on the provider.
    * @returns A new instance of FetchClient.
    */
-  public getFetchClient(options?: FetchClientOptions): FetchClient {
-    const o = {
-      defaultRequestOptions: this.#options.defaultRequestOptions,
-      baseUrl: this.#options.baseUrl,
-      cache: this.#cache,
-      fetch: this.fetch,
-      middleware: this.#options.middleware,
-      modelValidator: this.#options.modelValidator,
-      accessTokenFunc: this.#options.accessTokenFunc,
-      providerCounter: this.#counter,
-    };
-    options = { ...o, ...options };
-    return new FetchClient(options);
+  public getFetchClient(): FetchClient {
+    return new FetchClient(this);
   }
 
   /**
@@ -123,7 +121,7 @@ export class FetchClientProvider {
    * Sets the default model validator function for all FetchClient instances created by this provider.
    * @param validate - The function that validates the model.
    */
-  public setDefaultModelValidator(
+  public setModelValidator(
     validate: (model: object | null) => Promise<ProblemDetails | null>,
   ) {
     this.#options = {
@@ -136,7 +134,7 @@ export class FetchClientProvider {
    * Sets the default base URL for all FetchClient instances created by this provider.
    * @param url - The URL to set as the default base URL.
    */
-  public setDefaultBaseUrl(url: string) {
+  public setBaseUrl(url: string) {
     this.#options = {
       ...this.#options,
       baseUrl: url,

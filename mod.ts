@@ -31,7 +31,7 @@ export const defaultProvider: FetchClientProvider = defaultInstance;
  * @param baseUrl - The base URL to use for requests.
  */
 export function setDefaultBaseUrl(baseUrl: string) {
-  defaultProvider.setDefaultBaseUrl(baseUrl);
+  defaultProvider.setBaseUrl(baseUrl);
 }
 
 /**
@@ -51,7 +51,7 @@ export function setDefaultAccessTokenFunc(
 export function setDefaultModelValidator(
   validate: (model: object | null) => Promise<ProblemDetails | null>,
 ) {
-  defaultProvider.setDefaultModelValidator(validate);
+  defaultProvider.setModelValidator(validate);
 }
 
 /**
