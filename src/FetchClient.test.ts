@@ -485,7 +485,7 @@ Deno.test("can use kitchen sink function", async () => {
       },
       expectedStatusCodes: [200],
       params: {
-        limit: 4,
+        limit: 4, // this will be overridden in the getJSON call
       },
       errorCallback: (response) => {
         if (response.status === 404) {
@@ -513,7 +513,7 @@ Deno.test("can use kitchen sink function", async () => {
       assert(ctx.response);
     })
     .getJSON<Products>(
-      `products/search?q=x&limit=10`,
+      `products/search?q=x&limit=10`, // this will override the default params
     );
 
   assertEquals(res.status, 200);
