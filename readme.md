@@ -36,7 +36,7 @@ const response = await client.getJSON<Products>(
 const products = response.data;
 ```
 
-Or use function
+Get a typed JSON response using a function:
 
 ```ts
 import { getJSON } from '@exceptionless/fetchclient';
@@ -111,6 +111,10 @@ Use middleware:
 ```ts
 import { FetchClient, useMiddleware } from '@exceptionless/fetchclient';
 
+type Products = {
+  products: Array<{ id: number; name: string }>;
+};
+
 useMiddleware(async (ctx, next) => {
   console.log('starting request')
   await next();
@@ -118,9 +122,7 @@ useMiddleware(async (ctx, next) => {
 });
 
 const client = new FetchClient();
-const response = await client.getJSON<{
-  products: Array<{ id: number; name: string }>;
-}>(
+const response = await client.getJSON<Products>(
   `https://dummyjson.com/products/search?q=iphone&limit=10`,
 );
 ```
