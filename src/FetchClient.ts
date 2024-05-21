@@ -138,8 +138,9 @@ export class FetchClient {
    *
    * @param mw - The middleware functions to add.
    */
-  public use(...mw: FetchClientMiddleware[]): void {
+  public use(...mw: FetchClientMiddleware[]): FetchClient {
     this.#middleware.push(...mw);
+    return this;
   }
 
   /**
@@ -607,8 +608,10 @@ export class FetchClient {
 
     if (options?.params) {
       for (const [key, value] of Object.entries(options?.params)) {
-        if (value !== undefined && value !== null) {
-          parsed.searchParams.append(key, value as string);
+        if (
+          value !== undefined && value !== null && !parsed.searchParams.has(key)
+        ) {
+          parsed.searchParams.set(key, value as string);
         }
       }
 

@@ -3,7 +3,6 @@ import {
   FetchClient,
   ProblemDetails,
   setBaseUrl,
-  setCurrentProviderFunc,
   useFetchClient,
 } from "../mod.ts";
 import { FetchClientProvider } from "./FetchClientProvider.ts";
@@ -16,6 +15,15 @@ Deno.test("can getJSON", async () => {
   const res = await api.getJSON<Products>(
     `https://dummyjson.com/products/search?q=iphone&limit=10`,
   );
+  assertEquals(res.status, 200);
+  assert(res.data?.products);
+});
+
+Deno.test("can use function", async () => {
+  const res = await useFetchClient().getJSON<Products>(
+    `https://dummyjson.com/products/search?q=iphone&limit=10`,
+  );
+
   assertEquals(res.status, 200);
   assert(res.data?.products);
 });
@@ -33,6 +41,7 @@ Deno.test("can getJSON with baseUrl", async () => {
 
 Deno.test("can getJSON with client middleware", async () => {
   const provider = new FetchClientProvider();
+
   const fakeFetch = (): Promise<Response> =>
     new Promise((resolve) => {
       const data = JSON.stringify({
@@ -46,10 +55,9 @@ Deno.test("can getJSON with client middleware", async () => {
     });
 
   provider.fetch = fakeFetch;
-  const client = provider.getFetchClient();
-
   let called = false;
-  client.use(async (ctx, next) => {
+
+  provider.useMiddleware(async (ctx, next) => {
     assert(ctx);
     assert(ctx.request);
     assert(ctx.options.expectedStatusCodes);
@@ -60,14 +68,15 @@ Deno.test("can getJSON with client middleware", async () => {
     await next();
     assert(ctx.response);
   });
-  assert(client);
 
+  const client = provider.getFetchClient();
   const r = await client.getJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
     {
       expectedStatusCodes: [404],
     },
   );
+
   assert(r.ok);
   assertEquals(r.status, 200);
   assert(r.data);
@@ -402,9 +411,6 @@ Deno.test("can use middleware", async () => {
 });
 
 Deno.test("can use current provider", async () => {
-  const provider = new FetchClientProvider();
-  setCurrentProviderFunc(() => provider);
-
   const api = new FetchClient();
   setBaseUrl("https://dummyjson.com");
 
@@ -416,19 +422,105 @@ Deno.test("can use current provider", async () => {
   assert(res.data?.products);
 });
 
-Deno.test("can use function", async () => {
-  const provider = new FetchClientProvider();
-  setCurrentProviderFunc(() => provider);
+Deno.test("can use kitchen sink", async () => {
+  let called = false;
+  let optionsCalled = false;
 
-  const res = await useFetchClient({ baseUrl: "https://dummyjson.com" })
-    .getJSON<
-      Products
-    >(
-      `products/search?q=iphone&limit=10`,
+  const api = new FetchClient({
+    baseUrl: "https://dummyjson.com",
+    defaultRequestOptions: {
+      headers: {
+        "X-Test": "test",
+      },
+      expectedStatusCodes: [200],
+      params: {
+        limit: 3,
+      },
+      errorCallback: (response) => {
+        if (response.status === 404) {
+          console.log("Not found");
+        }
+      },
+    },
+    middleware: [
+      async (ctx, next) => {
+        assert(ctx);
+        assert(ctx.request);
+        assertFalse(ctx.response);
+        optionsCalled = true;
+        await next();
+        assert(ctx.response);
+      },
+    ],
+  }).use(async (ctx, next) => {
+    assert(ctx);
+    assert(ctx.request);
+    assertFalse(ctx.response);
+    called = true;
+    await next();
+    assert(ctx.response);
+  });
+
+  const res = await api.getJSON<Products>(
+    `products/search?q=x`,
+  );
+
+  assertEquals(res.status, 200);
+  assert(res.data?.products);
+  console.log(res.data.products);
+  assertEquals(res.data.products.length, 3);
+  assert(called);
+  assert(optionsCalled);
+});
+
+Deno.test("can use kitchen sink function", async () => {
+  let called = false;
+  let optionsCalled = false;
+
+  const res = await useFetchClient({
+    baseUrl: "https://dummyjson.com",
+    defaultRequestOptions: {
+      headers: {
+        "X-Test": "test",
+      },
+      expectedStatusCodes: [200],
+      params: {
+        limit: 4,
+      },
+      errorCallback: (response) => {
+        if (response.status === 404) {
+          console.log("Not found");
+        }
+      },
+    },
+    middleware: [
+      async (ctx, next) => {
+        assert(ctx);
+        assert(ctx.request);
+        assertFalse(ctx.response);
+        optionsCalled = true;
+        await next();
+        assert(ctx.response);
+      },
+    ],
+  })
+    .use(async (ctx, next) => {
+      assert(ctx);
+      assert(ctx.request);
+      assertFalse(ctx.response);
+      called = true;
+      await next();
+      assert(ctx.response);
+    })
+    .getJSON<Products>(
+      `products/search?q=x&limit=10`,
     );
 
   assertEquals(res.status, 200);
   assert(res.data?.products);
+  assertEquals(res.data.products.length, 10);
+  assert(called);
+  assert(optionsCalled);
 });
 
 function delay(time: number): Promise<void> {
