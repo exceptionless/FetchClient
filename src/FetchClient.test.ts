@@ -1,13 +1,13 @@
 import { assert, assertEquals, assertFalse } from "@std/assert";
 import {
-  defaultProvider,
   FetchClient,
   ProblemDetails,
-  setDefaultBaseUrl,
+  setBaseUrl,
+  setCurrentProviderFunc,
 } from "../mod.ts";
+import { FetchClientProvider } from "./FetchClientProvider.ts";
 
 Deno.test("can getJSON", async () => {
-  defaultProvider.fetch = undefined;
   const api = new FetchClient();
   const res = await api.getJSON<{
     products: Array<{ id: number; name: string }>;
@@ -19,7 +19,6 @@ Deno.test("can getJSON", async () => {
 });
 
 Deno.test("can getJSON with baseUrl", async () => {
-  defaultProvider.fetch = undefined;
   const api = new FetchClient({
     baseUrl: "https://dummyjson.com",
   });
@@ -32,7 +31,8 @@ Deno.test("can getJSON with baseUrl", async () => {
   assert(res.data?.products);
 });
 
-Deno.test("can getJSON with middleware", async () => {
+Deno.test("can getJSON with client middleware", async () => {
+  const provider = new FetchClientProvider();
   const fakeFetch = (): Promise<Response> =>
     new Promise((resolve) => {
       const data = JSON.stringify({
@@ -41,16 +41,13 @@ Deno.test("can getJSON with middleware", async () => {
         title: "A random title",
         completed: false,
       });
-      assert(defaultProvider.isLoading);
+      assert(provider.isLoading);
       resolve(new Response(data));
     });
 
-  defaultProvider.fetch = fakeFetch;
-  const client = defaultProvider.getFetchClient();
-  const res = await client.getJSON(
-    "https://dummyjson.com/products/search?q=iphone&limit=10",
-  );
-  console.log("hi", res.data);
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
+
   let called = false;
   client.use(async (ctx, next) => {
     assert(ctx);
@@ -58,7 +55,7 @@ Deno.test("can getJSON with middleware", async () => {
     assert(ctx.options.expectedStatusCodes);
     assert(ctx.options.expectedStatusCodes.length > 0);
     assertFalse(ctx.response);
-    assert(defaultProvider.isLoading);
+    assert(provider.isLoading);
     called = true;
     await next();
     assert(ctx.response);
@@ -80,10 +77,11 @@ Deno.test("can getJSON with middleware", async () => {
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
-  assertFalse(defaultProvider.isLoading);
+  assertFalse(provider.isLoading);
 });
 
 Deno.test("can getJSON with caching", async () => {
+  const provider = new FetchClientProvider();
   let fetchCount = 0;
   const fakeFetch = (): Promise<Response> =>
     new Promise((resolve) => {
@@ -94,25 +92,12 @@ Deno.test("can getJSON with caching", async () => {
         completed: false,
       });
       fetchCount++;
-      assert(defaultProvider.isLoading);
+      assert(provider.isLoading);
       resolve(new Response(data));
     });
 
-  defaultProvider.fetch = fakeFetch;
-  const client = defaultProvider.getFetchClient();
-  let called = false;
-  client.use(async (ctx, next) => {
-    assert(ctx);
-    assert(ctx.request);
-    assert(ctx.options.expectedStatusCodes);
-    assert(ctx.options.expectedStatusCodes.length > 0);
-    assertFalse(ctx.response);
-    assert(defaultProvider.isLoading);
-    called = true;
-    await next();
-    assert(ctx.response);
-  });
-  assert(client);
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
 
   type Todo = { userId: number; id: number; title: string; completed: boolean };
   let r = await client.getJSON<Todo>(
@@ -122,17 +107,17 @@ Deno.test("can getJSON with caching", async () => {
       cacheKey: ["todos", "1"],
     },
   );
+
   assert(r.ok);
   assertEquals(r.status, 200);
   assert(r.data);
-  assert(called);
   assertEquals(r.data!.userId, 1);
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
-  assertFalse(defaultProvider.isLoading);
+  assertFalse(provider.isLoading);
   assertEquals(fetchCount, 1);
-  assert(defaultProvider.cache.has(["todos", "1"]));
+  assert(provider.cache.has(["todos", "1"]));
 
   r = await client.getJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
@@ -144,16 +129,15 @@ Deno.test("can getJSON with caching", async () => {
   assert(r.ok);
   assertEquals(r.status, 200);
   assert(r.data);
-  assert(called);
   assertEquals(r.data!.userId, 1);
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
-  assertFalse(defaultProvider.isLoading);
+  assertFalse(provider.isLoading);
   assertEquals(fetchCount, 1);
-  assert(defaultProvider.cache.has(["todos", "1"]));
+  assert(provider.cache.has(["todos", "1"]));
 
-  defaultProvider.cache.delete(["todos", "1"]);
+  provider.cache.delete(["todos", "1"]);
 
   r = await client.getJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
@@ -166,14 +150,13 @@ Deno.test("can getJSON with caching", async () => {
   assert(r.ok);
   assertEquals(r.status, 200);
   assert(r.data);
-  assert(called);
   assertEquals(r.data!.userId, 1);
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
-  assertFalse(defaultProvider.isLoading);
+  assertFalse(provider.isLoading);
   assertEquals(fetchCount, 2);
-  assert(defaultProvider.cache.has(["todos", "1"]));
+  assert(provider.cache.has(["todos", "1"]));
 
   await delay(100);
 
@@ -187,17 +170,17 @@ Deno.test("can getJSON with caching", async () => {
   assert(r.ok);
   assertEquals(r.status, 200);
   assert(r.data);
-  assert(called);
   assertEquals(r.data!.userId, 1);
   assertEquals(r.data!.id, 1);
   assertEquals(r.data!.title, "A random title");
   assertFalse(r.data!.completed);
-  assertFalse(defaultProvider.isLoading);
+  assertFalse(provider.isLoading);
   assertEquals(fetchCount, 3);
-  assert(defaultProvider.cache.has(["todos", "1"]));
+  assert(provider.cache.has(["todos", "1"]));
 });
 
-Deno.test("can postJSON with middleware", async () => {
+Deno.test("can postJSON with client middleware", async () => {
+  const provider = new FetchClientProvider();
   const fakeFetch = (): Promise<Response> =>
     new Promise((resolve) => {
       const data = JSON.stringify({
@@ -209,8 +192,8 @@ Deno.test("can postJSON with middleware", async () => {
       resolve(new Response(data));
     });
 
-  defaultProvider.fetch = fakeFetch;
-  const client = defaultProvider.getFetchClient();
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   let called = false;
   client.use(async (ctx, next) => {
     assert(ctx);
@@ -237,7 +220,8 @@ Deno.test("can postJSON with middleware", async () => {
   assertEquals(r.data!.completed, false);
 });
 
-Deno.test("can putJSON with middleware", async () => {
+Deno.test("can putJSON with client middleware", async () => {
+  const provider = new FetchClientProvider();
   const fakeFetch = (): Promise<Response> =>
     new Promise((resolve) => {
       const data = JSON.stringify({
@@ -249,8 +233,8 @@ Deno.test("can putJSON with middleware", async () => {
       resolve(new Response(data));
     });
 
-  defaultProvider.fetch = fakeFetch;
-  const client = defaultProvider.getFetchClient();
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   let called = false;
   client.use(async (ctx, next) => {
     assert(ctx);
@@ -276,14 +260,15 @@ Deno.test("can putJSON with middleware", async () => {
   assertEquals(r.data!.completed, false);
 });
 
-Deno.test("can delete with middleware", async () => {
+Deno.test("can delete with client middleware", async () => {
+  const provider = new FetchClientProvider();
   const fakeFetch = (): Promise<Response> =>
     new Promise((resolve) => {
       resolve(new Response());
     });
 
-  defaultProvider.fetch = fakeFetch;
-  const client = defaultProvider.getFetchClient();
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   let called = false;
   client.use(async (ctx, next) => {
     assert(ctx);
@@ -302,6 +287,7 @@ Deno.test("can delete with middleware", async () => {
 });
 
 Deno.test("can abort getJSON", () => {
+  const provider = new FetchClientProvider();
   const controller = new AbortController();
   let responseTimeout: ReturnType<typeof setTimeout>;
   const fakeFetch = (r: unknown): Promise<Response> =>
@@ -321,8 +307,8 @@ Deno.test("can abort getJSON", () => {
       }, 1000);
     });
 
-  defaultProvider.fetch = fakeFetch;
-  const client = defaultProvider.getFetchClient();
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   client
     .getJSON("https://jsonplaceholder.typicode.com/todos/1", {
       signal: controller.signal,
@@ -335,7 +321,8 @@ Deno.test("can abort getJSON", () => {
   controller.abort();
 });
 
-Deno.test("will validate postJSON model with default model validator", async () => {
+Deno.test("will validate postJSON model with provider model validator", async () => {
+  const provider = new FetchClientProvider();
   let called = false;
   const fakeFetch = (): Promise<Response> =>
     new Promise((resolve) => {
@@ -348,7 +335,7 @@ Deno.test("will validate postJSON model with default model validator", async () 
     password: "test",
   };
   // deno-lint-ignore require-await
-  defaultProvider.setModelValidator(async (data: object | null) => {
+  provider.setModelValidator(async (data: object | null) => {
     // use zod or class validator
     const problem = new ProblemDetails();
     const d = data as { password: string };
@@ -359,8 +346,8 @@ Deno.test("will validate postJSON model with default model validator", async () 
     }
     return problem;
   });
-  defaultProvider.fetch = fakeFetch;
-  const client = defaultProvider.getFetchClient();
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
   const response = await client.postJSON(
     "https://jsonplaceholder.typicode.com/todos/1",
     data,
@@ -379,7 +366,8 @@ Deno.test("will validate postJSON model with default model validator", async () 
   );
 });
 
-Deno.test("can use global middleware", async () => {
+Deno.test("can use middleware", async () => {
+  const provider = new FetchClientProvider();
   const fakeFetch = (): Promise<Response> =>
     new Promise((resolve) => {
       const data = JSON.stringify({
@@ -391,9 +379,9 @@ Deno.test("can use global middleware", async () => {
       resolve(new Response(data));
     });
 
-  defaultProvider.fetch = fakeFetch;
+  provider.fetch = fakeFetch;
   let called = false;
-  defaultProvider.useMiddleware(async (ctx, next) => {
+  provider.useMiddleware(async (ctx, next) => {
     assert(ctx);
     assert(ctx.request);
     assertFalse(ctx.response);
@@ -401,7 +389,7 @@ Deno.test("can use global middleware", async () => {
     await next();
     assert(ctx.response);
   });
-  const client = defaultProvider.getFetchClient();
+  const client = provider.getFetchClient();
   assert(client);
 
   type Todo = { userId: number; id: number; title: string; completed: boolean };
@@ -418,10 +406,12 @@ Deno.test("can use global middleware", async () => {
   assertEquals(r.data!.completed, false);
 });
 
-Deno.test("can use defaultProvider", async () => {
+Deno.test("can use current provider", async () => {
+  const provider = new FetchClientProvider();
+  setCurrentProviderFunc(() => provider);
+
   const api = new FetchClient();
-  defaultProvider.fetch = undefined;
-  setDefaultBaseUrl("https://dummyjson.com");
+  setBaseUrl("https://dummyjson.com");
 
   assertEquals(api.options.baseUrl, "https://dummyjson.com");
   const res = await api.getJSON<{

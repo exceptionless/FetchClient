@@ -6,7 +6,8 @@ import type { FetchClientMiddleware, Next } from "./FetchClientMiddleware.ts";
 import type { FetchClientContext } from "./FetchClientContext.ts";
 import { parseLinkHeader } from "./LinkHeader.ts";
 import type { FetchClientCache } from "./FetchClientCache.ts";
-import { defaultInstance, FetchClientProvider } from "./FetchClientProvider.ts";
+import { FetchClientProvider } from "./FetchClientProvider.ts";
+import { getCurrentProvider } from "./DefaultHelpers.ts";
 
 type Fetch = typeof globalThis.fetch;
 
@@ -81,7 +82,7 @@ export class FetchClient {
       this.#provider = optionsOrProvider;
     } else {
       this.#options = optionsOrProvider;
-      this.#provider = optionsOrProvider?.provider ?? defaultInstance;
+      this.#provider = optionsOrProvider?.provider ?? getCurrentProvider();
     }
   }
 
@@ -185,19 +186,34 @@ export class FetchClient {
    * Sends a POST request to the specified URL.
    *
    * @param url - The URL to send the request to.
-   * @param body - The request body, can be an object or a string.
+   * @param body - The request body, can be an object, a string, or FormData.
    * @param options - Additional options for the request.
    * @returns A promise that resolves to a FetchClientResponse object.
    */
   async post(
     url: string,
-    body?: object | string,
+    body?: object | string | FormData,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<unknown>> {
     options = {
       ...this.options.defaultRequestOptions,
       ...options,
     };
+
+    if (body instanceof FormData) {
+      const response = await this.fetchInternal(
+        url,
+        options,
+        {
+          method: "POST",
+          headers: { ...options?.headers },
+          body: body,
+        },
+      );
+
+      return response;
+    }
+
     const problem = await this.validate(body, options);
     if (problem) return this.problemToResponse(problem, url);
 
@@ -208,36 +224,6 @@ export class FetchClient {
         method: "POST",
         headers: { "Content-Type": "application/json", ...options?.headers },
         body: typeof body === "string" ? body : JSON.stringify(body),
-      },
-    );
-
-    return response;
-  }
-
-  /**
-   * Sends a POST request with form data to the specified URL.
-   *
-   * @param url - The URL to send the request to.
-   * @param formData - The form data to include in the request body.
-   * @param options - The optional request options.
-   * @returns A promise that resolves to the response of the request.
-   */
-  async postForm(
-    url: string,
-    formData: FormData,
-    options?: RequestOptions,
-  ): Promise<FetchClientResponse<unknown>> {
-    options = {
-      ...this.options.defaultRequestOptions,
-      ...options,
-    };
-    const response = await this.fetchInternal(
-      url,
-      options,
-      {
-        method: "POST",
-        headers: { ...options?.headers },
-        body: formData,
       },
     );
 
@@ -264,19 +250,34 @@ export class FetchClient {
   /**
    * Sends a PUT request to the specified URL with the given body and options.
    * @param url - The URL to send the request to.
-   * @param body - The request body, can be an object or a string.
+   * @param body - The request body, can be an object, a string, or FormData.
    * @param options - The request options.
    * @returns A promise that resolves to a FetchClientResponse object.
    */
   async put(
     url: string,
-    body?: object | string,
+    body?: object | string | FormData,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<unknown>> {
     options = {
       ...this.options.defaultRequestOptions,
       ...options,
     };
+
+    if (body instanceof FormData) {
+      const response = await this.fetchInternal(
+        url,
+        options,
+        {
+          method: "PUT",
+          headers: { ...options?.headers },
+          body: body,
+        },
+      );
+
+      return response;
+    }
+
     const problem = await this.validate(body, options);
     if (problem) return this.problemToResponse(problem, url);
 
@@ -313,19 +314,34 @@ export class FetchClient {
   /**
    * Sends a PATCH request to the specified URL with the provided body and options.
    * @param url - The URL to send the PATCH request to.
-   * @param body - The body of the request. It can be an object or a string.
+   * @param body - The body of the request. It can be an object, a string, or FormData.
    * @param options - The options for the request.
    * @returns A Promise that resolves to the response of the PATCH request.
    */
   async patch(
     url: string,
-    body?: object | string,
+    body?: object | string | FormData,
     options?: RequestOptions,
   ): Promise<Response> {
     options = {
       ...this.options.defaultRequestOptions,
       ...options,
     };
+
+    if (body instanceof FormData) {
+      const response = await this.fetchInternal(
+        url,
+        options,
+        {
+          method: "PATCH",
+          headers: { ...options?.headers },
+          body: body,
+        },
+      );
+
+      return response;
+    }
+
     const problem = await this.validate(body, options);
     if (problem) return this.problemToResponse(problem, url);
 
