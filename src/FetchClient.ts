@@ -2,7 +2,10 @@ import { Counter } from "./Counter.ts";
 import type { GetRequestOptions, RequestOptions } from "./RequestOptions.ts";
 import { ProblemDetails } from "./ProblemDetails.ts";
 import type { FetchClientResponse } from "./FetchClientResponse.ts";
-import type { FetchClientMiddleware, Next } from "./FetchClientMiddleware.ts";
+import type {
+  FetchClientMiddleware,
+  NextMiddleware,
+} from "./FetchClientMiddleware.ts";
 import type { FetchClientContext } from "./FetchClientContext.ts";
 import { parseLinkHeader } from "./LinkHeader.ts";
 import type { FetchClientCache } from "./FetchClientCache.ts";
@@ -440,7 +443,10 @@ export class FetchClient {
       init = { ...init, signal: options.signal };
     }
 
-    const fetchMiddleware = async (ctx: FetchClientContext, next: Next) => {
+    const fetchMiddleware = async (
+      ctx: FetchClientContext,
+      next: NextMiddleware,
+    ) => {
       const getOptions = ctx.options as GetRequestOptions;
       if (getOptions?.cacheKey) {
         const cachedResponse = this.cache.get(getOptions.cacheKey);

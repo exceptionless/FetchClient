@@ -8,10 +8,10 @@ import type { FetchClientContext } from "./FetchClientContext.ts";
  */
 export type FetchClientMiddleware = (
   context: FetchClientContext,
-  next: Next,
+  next: NextMiddleware,
 ) => Promise<void>;
 
 /**
  * Represents a function that returns a promise to indicate the completion of an asynchronous operation.
  */
-export type Next = () => Promise<void>;
+export type NextMiddleware = () => Promise<void>;
