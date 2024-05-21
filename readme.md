@@ -39,13 +39,13 @@ const products = response.data;
 Get a typed JSON response using a function:
 
 ```ts
-import { getJSON } from '@exceptionless/fetchclient';
+import { useFetchClient } from '@exceptionless/fetchclient';
 
 type Products = {
   products: Array<{ id: number; name: string }>;
 };
 
-const response = await getJSON<Products>(
+const response = await useFetchClient().getJSON<Products>(
   `https://dummyjson.com/products/search?q=iphone&limit=10`,
 );
 

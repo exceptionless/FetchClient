@@ -4,14 +4,16 @@ import {
   ProblemDetails,
   setBaseUrl,
   setCurrentProviderFunc,
+  useFetchClient,
 } from "../mod.ts";
 import { FetchClientProvider } from "./FetchClientProvider.ts";
 
+type Todo = { userId: number; id: number; title: string; completed: boolean };
+type Products = { products: Array<{ id: number; name: string }> };
+
 Deno.test("can getJSON", async () => {
   const api = new FetchClient();
-  const res = await api.getJSON<{
-    products: Array<{ id: number; name: string }>;
-  }>(
+  const res = await api.getJSON<Products>(
     `https://dummyjson.com/products/search?q=iphone&limit=10`,
   );
   assertEquals(res.status, 200);
@@ -22,9 +24,7 @@ Deno.test("can getJSON with baseUrl", async () => {
   const api = new FetchClient({
     baseUrl: "https://dummyjson.com",
   });
-  const res = await api.getJSON<{
-    products: Array<{ id: number; name: string }>;
-  }>(
+  const res = await api.getJSON<Products>(
     `/products/search?q=iphone&limit=10`,
   );
   assertEquals(res.status, 200);
@@ -62,7 +62,6 @@ Deno.test("can getJSON with client middleware", async () => {
   });
   assert(client);
 
-  type Todo = { userId: number; id: number; title: string; completed: boolean };
   const r = await client.getJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
     {
@@ -99,7 +98,6 @@ Deno.test("can getJSON with caching", async () => {
   provider.fetch = fakeFetch;
   const client = provider.getFetchClient();
 
-  type Todo = { userId: number; id: number; title: string; completed: boolean };
   let r = await client.getJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
     {
@@ -206,7 +204,6 @@ Deno.test("can postJSON with client middleware", async () => {
   });
   assert(client);
 
-  type Todo = { userId: number; id: number; title: string; completed: boolean };
   const r = await client.postJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
   );
@@ -246,7 +243,6 @@ Deno.test("can putJSON with client middleware", async () => {
   });
   assert(client);
 
-  type Todo = { userId: number; id: number; title: string; completed: boolean };
   const r = await client.putJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
   );
@@ -392,7 +388,6 @@ Deno.test("can use middleware", async () => {
   const client = provider.getFetchClient();
   assert(client);
 
-  type Todo = { userId: number; id: number; title: string; completed: boolean };
   const r = await client.getJSON<Todo>(
     "https://jsonplaceholder.typicode.com/todos/1",
   );
@@ -414,11 +409,24 @@ Deno.test("can use current provider", async () => {
   setBaseUrl("https://dummyjson.com");
 
   assertEquals(api.options.baseUrl, "https://dummyjson.com");
-  const res = await api.getJSON<{
-    products: Array<{ id: number; name: string }>;
-  }>(
+  const res = await api.getJSON<Products>(
     `products/search?q=iphone&limit=10`,
   );
+  assertEquals(res.status, 200);
+  assert(res.data?.products);
+});
+
+Deno.test("can use function", async () => {
+  const provider = new FetchClientProvider();
+  setCurrentProviderFunc(() => provider);
+
+  const res = await useFetchClient({ baseUrl: "https://dummyjson.com" })
+    .getJSON<
+      Products
+    >(
+      `products/search?q=iphone&limit=10`,
+    );
+
   assertEquals(res.status, 200);
   assert(res.data?.products);
 });

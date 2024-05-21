@@ -1,7 +1,7 @@
 /**
  * Represents a cache key used in the FetchClientCache.
  */
-export type CacheKey = string[];
+export type CacheKey = string[] | string;
 
 /**
  * Represents an entry in the FetchClientCache.
@@ -65,6 +65,25 @@ export class FetchClientCache {
   }
 
   /**
+   * Deletes all responses from the cache that have keys beginning with the specified key.
+   * @param prefix - The cache key prefix.
+   * @returns The number of responses that were deleted.
+   */
+  public deleteAll(prefix: CacheKey): number {
+    let count = 0;
+
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(this.getHash(prefix))) {
+        if (this.cache.delete(key)) {
+          count++;
+        }
+      }
+    }
+
+    return count;
+  }
+
+  /**
    * Checks if a response exists in the cache with the specified key.
    * @param key - The cache key.
    * @returns True if the response exists in the cache, false otherwise.
@@ -89,6 +108,10 @@ export class FetchClientCache {
   }
 
   private getHash(key: CacheKey): string {
-    return key.join(":");
+    if (key instanceof Array) {
+      return key.join(":");
+    }
+
+    return key;
   }
 }

@@ -90,9 +90,20 @@ export class FetchClientProvider {
 
   /**
    * Creates a new instance of FetchClient using the current provider.
+   * @param options - The options to use for the FetchClient instance.
    * @returns A new instance of FetchClient.
    */
-  public getFetchClient(): FetchClient {
+  public getFetchClient(options?: FetchClientOptions): FetchClient {
+    if (options) {
+      options = {
+        ...this.#options,
+        ...options,
+      };
+      options.provider = this;
+
+      return new FetchClient(options);
+    }
+
     return new FetchClient(this);
   }
 
