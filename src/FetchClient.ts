@@ -236,13 +236,13 @@ export class FetchClient {
    *
    * @template T - The type of the response data.
    * @param {string} url - The URL to send the request to.
-   * @param {object | string} [body] - The JSON payload to send with the request.
+   * @param {object | string | FormData} [body] - The JSON payload or form data to send with the request.
    * @param {RequestOptions} [options] - Additional options for the request.
    * @returns {Promise<FetchClientResponse<T>>} - A promise that resolves to the response data.
    */
   postJSON<T>(
     url: string,
-    body?: object | string,
+    body?: object | string | FormData,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<T>> {
     return this.post(url, body, options) as Promise<FetchClientResponse<T>>;
