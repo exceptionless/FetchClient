@@ -1,6 +1,8 @@
 <!-- deno-fmt-ignore-file -->
 # FetchClient [![CI](https://github.com/exceptionless/fetchclient/workflows/CI/badge.svg)](https://github.com/exceptionless/fetchclient/actions?query=workflow%3ACI) [![JSR](https://jsr.io/badges/@exceptionless/fetchclient)](https://jsr.io/@exceptionless/fetchclient)
 
+FetchClient is a library that makes it easier to use the fetch API for JSON APIs. It provides the following features:
+
 * Makes fetch easier to use for JSON APIs
 * Automatic model validation
 * Caching
@@ -126,6 +128,10 @@ const response = await client.getJSON<Products>(
   `https://dummyjson.com/products/search?q=iphone&limit=10`,
 );
 ```
+
+Also, take a look at the tests:
+
+[FetchClient Tests](src/FetchClient.test.ts)
 
 ## License
 
