@@ -33,6 +33,11 @@ export type RequestOptions = {
    * An AbortSignal object that can be used to cancel the request.
    */
   signal?: AbortSignal;
+
+  /**
+   * Any additional metadata to be used during the request and middleware.
+   */
+  meta?: Record<string, unknown>;
 };
 
 /**

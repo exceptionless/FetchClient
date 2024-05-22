@@ -7,8 +7,17 @@ import {
   useFetchClient,
 } from "../mod.ts";
 import { FetchClientProvider } from "./FetchClientProvider.ts";
+import { z, type ZodTypeAny } from "https://deno.land/x/zod@v3.23.8/mod.ts";
 
-type Todo = { userId: number; id: number; title: string; completed: boolean };
+export const TodoSchema = z.object({
+  userId: z.number(),
+  id: z.number(),
+  title: z.string(),
+  completed: z.boolean(),
+  completedTime: z.coerce.date().optional(),
+});
+
+type Todo = z.infer<typeof TodoSchema>;
 type Products = { products: Array<{ id: number; name: string }> };
 
 Deno.test("can getJSON", async () => {
@@ -421,6 +430,49 @@ Deno.test("can use current provider", async () => {
   );
   assertEquals(res.status, 200);
   assert(res.data?.products);
+});
+
+Deno.test("can getJSON with zod schema", async () => {
+  const provider = new FetchClientProvider();
+  const fakeFetch = (): Promise<Response> =>
+    new Promise((resolve) => {
+      const data = JSON.stringify({
+        userId: 1,
+        id: 1,
+        title: "A random title",
+        completed: false,
+        completedTime: "2021-01-01T00:00:00.000Z",
+      });
+      resolve(new Response(data));
+    });
+
+  provider.fetch = fakeFetch;
+
+  const api = provider.getFetchClient();
+
+  api.use(async (ctx, next) => {
+    await next();
+
+    if (ctx.options.meta?.schema) {
+      const schema = ctx.options.meta?.schema as ZodTypeAny;
+      const parsed = schema.safeParse(ctx.response!.data);
+
+      if (parsed.success) {
+        ctx.response!.data = parsed.data;
+      }
+    }
+  });
+
+  const res = await api.getJSON<Todo>(
+    `https://jsonplaceholder.typicode.com/todos/1`,
+    {
+      meta: { schema: TodoSchema },
+    },
+  );
+
+  assertEquals(res.status, 200);
+  assert(res.data);
+  assert(TodoSchema.parse(res.data));
 });
 
 Deno.test("can use kitchen sink", async () => {
