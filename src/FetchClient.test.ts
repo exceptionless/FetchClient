@@ -1,7 +1,7 @@
 import { assert, assertEquals, assertFalse } from "@std/assert";
 import {
   FetchClient,
-  FetchClientContext,
+  type FetchClientContext,
   ProblemDetails,
   setBaseUrl,
   useFetchClient,
