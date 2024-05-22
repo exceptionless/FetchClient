@@ -2,10 +2,7 @@ import { Counter } from "./Counter.ts";
 import type { GetRequestOptions, RequestOptions } from "./RequestOptions.ts";
 import { ProblemDetails } from "./ProblemDetails.ts";
 import type { FetchClientResponse } from "./FetchClientResponse.ts";
-import type {
-  FetchClientMiddleware,
-  NextMiddleware,
-} from "./FetchClientMiddleware.ts";
+import type { FetchClientMiddleware } from "./FetchClientMiddleware.ts";
 import type { FetchClientContext } from "./FetchClientContext.ts";
 import { parseLinkHeader } from "./LinkHeader.ts";
 import type { FetchClientCache } from "./FetchClientCache.ts";
@@ -446,7 +443,7 @@ export class FetchClient {
 
     const fetchMiddleware = async (
       ctx: FetchClientContext,
-      next: NextMiddleware,
+      next: () => Promise<void>,
     ) => {
       const getOptions = ctx.options as GetRequestOptions;
       if (getOptions?.cacheKey) {
@@ -503,7 +500,7 @@ export class FetchClient {
       options,
       request: new Request(url, init),
       response: null,
-      data: {},
+      meta: {},
     };
     await this.invokeMiddleware(context, middleware);
 

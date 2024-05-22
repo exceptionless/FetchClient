@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertFalse } from "@std/assert";
 import {
   FetchClient,
+  FetchClientContext,
   ProblemDetails,
   setBaseUrl,
   useFetchClient,
@@ -456,10 +457,13 @@ Deno.test("can use kitchen sink", async () => {
     assert(ctx);
     assert(ctx.request);
     assertFalse(ctx.response);
+    assertFalse(ctx.meta.someMiddleware);
     called = true;
     await next();
+    assert(ctx.meta.someMiddleware);
     assert(ctx.response);
-  });
+  })
+    .use(someMiddleware);
 
   const res = await api.getJSON<Products>(
     `products/search?q=x`,
@@ -467,11 +471,15 @@ Deno.test("can use kitchen sink", async () => {
 
   assertEquals(res.status, 200);
   assert(res.data?.products);
-  console.log(res.data.products);
   assertEquals(res.data.products.length, 3);
   assert(called);
   assert(optionsCalled);
 });
+
+function someMiddleware(ctx: FetchClientContext, next: () => Promise<void>) {
+  ctx.meta.someMiddleware = true;
+  return next();
+}
 
 Deno.test("can use kitchen sink function", async () => {
   let called = false;
