@@ -603,6 +603,7 @@ export class FetchClient {
       json: () => new Promise((resolve) => resolve(problem)),
       text: () => new Promise((resolve) => resolve(JSON.stringify(problem))),
       arrayBuffer: () => new Promise((resolve) => resolve(new ArrayBuffer(0))),
+      // @ts-ignore: New in Deno 1.44
       bytes: () => new Promise((resolve) => resolve(new Uint8Array())),
       blob: () => new Promise((resolve) => resolve(new Blob())),
       formData: () => new Promise((resolve) => resolve(new FormData())),
