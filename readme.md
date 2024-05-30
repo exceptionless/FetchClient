@@ -8,6 +8,7 @@ FetchClient is a library that makes it easier to use the fetch API for JSON APIs
 * Caching
 * Middleware
 * Problem Details support
+* Option to parse dates in responses
 
 ## Install
 
