@@ -466,7 +466,7 @@ export class FetchClient {
           "application/problem+json",
         )
       ) {
-        ctx.response = await this.getJSONResponse<T>(response);
+        ctx.response = await this.getJSONResponse<T>(response, ctx.options);
       } else {
         ctx.response = response as FetchClientResponse<T>;
         ctx.response.data = null;
@@ -527,10 +527,20 @@ export class FetchClient {
 
   private async getJSONResponse<T>(
     response: Response,
+    options: RequestOptions,
   ): Promise<FetchClientResponse<T>> {
     let data = null;
     try {
-      data = await response.json();
+      if (options.reviver) {
+        const body = await response.text();
+        data = JSON.parse(body, options.reviver);
+      } else if (options.shouldParseDates) {
+        // TODO: Combine reviver and shouldParseDates into a single function
+        const body = await response.text();
+        data = JSON.parse(body, this.parseDates);
+      } else {
+        data = await response.json();
+      }
     } catch {
       data = new ProblemDetails();
       data.setErrorMessage("Unable to deserialize response data");
@@ -553,6 +563,21 @@ export class FetchClient {
     jsonResponse.data = data;
 
     return jsonResponse;
+  }
+
+  private parseDates(this: unknown, _key: string, value: unknown): unknown {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+
+    return value;
   }
 
   private problemToResponse(
@@ -578,6 +603,7 @@ export class FetchClient {
       json: () => new Promise((resolve) => resolve(problem)),
       text: () => new Promise((resolve) => resolve(JSON.stringify(problem))),
       arrayBuffer: () => new Promise((resolve) => resolve(new ArrayBuffer(0))),
+      bytes: () => new Promise((resolve) => resolve(new Uint8Array())),
       blob: () => new Promise((resolve) => resolve(new Blob())),
       formData: () => new Promise((resolve) => resolve(new FormData())),
       clone: () => {

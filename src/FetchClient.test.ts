@@ -18,7 +18,9 @@ export const TodoSchema = z.object({
 });
 
 type Todo = z.infer<typeof TodoSchema>;
-type Products = { products: Array<{ id: number; name: string }> };
+type Products = {
+  products: Array<{ id: number; name: string }>;
+};
 
 Deno.test("can getJSON", async () => {
   const api = new FetchClient();
@@ -473,6 +475,87 @@ Deno.test("can getJSON with zod schema", async () => {
   assertEquals(res.status, 200);
   assert(res.data);
   assert(TodoSchema.parse(res.data));
+});
+
+Deno.test("can parse dates", async () => {
+  const provider = new FetchClientProvider();
+  const fakeFetch = (): Promise<Response> =>
+    new Promise((resolve) => {
+      const data = JSON.stringify({
+        userId: 1,
+        id: 1,
+        title: "A random title",
+        completed: false,
+        completedTime: "2021-01-01T00:00:00.000Z",
+      });
+      resolve(new Response(data));
+    });
+
+  provider.fetch = fakeFetch;
+
+  const api = provider.getFetchClient();
+
+  let res = await api.getJSON<Todo>(
+    `https://jsonplaceholder.typicode.com/todos/1`,
+  );
+
+  assertEquals(res.status, 200);
+  assert(res.data);
+  assertFalse(res.data.completedTime instanceof Date);
+
+  res = await api.getJSON<Todo>(
+    `https://jsonplaceholder.typicode.com/todos/1`,
+    {
+      shouldParseDates: true,
+    },
+  );
+
+  assertEquals(res.status, 200);
+  assert(res.data);
+  assert(res.data.completedTime instanceof Date);
+});
+
+Deno.test("can use reviver", async () => {
+  const provider = new FetchClientProvider();
+  const fakeFetch = (): Promise<Response> =>
+    new Promise((resolve) => {
+      const data = JSON.stringify({
+        userId: 1,
+        id: 1,
+        title: "A random title",
+        completed: false,
+        completedTime: "2021-01-01T00:00:00.000Z",
+      });
+      resolve(new Response(data));
+    });
+
+  provider.fetch = fakeFetch;
+
+  const api = provider.getFetchClient();
+
+  let res = await api.getJSON<Todo>(
+    `https://jsonplaceholder.typicode.com/todos/1`,
+  );
+
+  assertEquals(res.status, 200);
+  assert(res.data);
+  assertFalse(res.data.completedTime instanceof Date);
+
+  res = await api.getJSON<Todo>(
+    `https://jsonplaceholder.typicode.com/todos/1`,
+    {
+      reviver: (key: string, value: unknown) => {
+        if (key === "completedTime") {
+          return new Date(<string> value);
+        }
+        return value;
+      },
+    },
+  );
+
+  assertEquals(res.status, 200);
+  assert(res.data);
+  assert(res.data.completedTime instanceof Date);
 });
 
 Deno.test("can use kitchen sink", async () => {

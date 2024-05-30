@@ -35,6 +35,16 @@ export type RequestOptions = {
   signal?: AbortSignal;
 
   /**
+   * Specifies whether the JSON parsing should convert strings that look like dates into Date instances.
+   */
+  shouldParseDates?: boolean;
+
+  /**
+   * Specifies a reviver function to use for JSON response parsing.
+   */
+  reviver?: (this: unknown, key: string, value: unknown) => unknown;
+
+  /**
    * Any additional metadata to be used during the request and middleware.
    */
   meta?: Record<string, unknown>;
