@@ -5,5 +5,4 @@ export type FetchClientContext = {
   options: RequestOptions;
   request: Request;
   response: FetchClientResponse<unknown> | null;
-  meta: Record<string, unknown>;
-};
+} & Record<string, unknown>;

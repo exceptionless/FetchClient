@@ -62,7 +62,7 @@ export type FetchClientOptions = {
    * Counter for tracking the number of inflight requests at the provider level
    */
   providerCounter?: Counter;
-};
+} & Record<string, unknown>;
 
 /**
  * Represents a client for making HTTP requests using the Fetch API.

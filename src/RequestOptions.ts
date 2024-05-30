@@ -43,12 +43,7 @@ export type RequestOptions = {
    * Specifies a reviver function to use for JSON response parsing.
    */
   reviver?: (this: unknown, key: string, value: unknown) => unknown;
-
-  /**
-   * Any additional metadata to be used during the request and middleware.
-   */
-  meta?: Record<string, unknown>;
-};
+} & Record<string, unknown>;
 
 /**
  * Represents the options for a GET request.

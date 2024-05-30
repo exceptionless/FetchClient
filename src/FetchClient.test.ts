@@ -455,8 +455,8 @@ Deno.test("can getJSON with zod schema", async () => {
   api.use(async (ctx, next) => {
     await next();
 
-    if (ctx.options.meta?.schema) {
-      const schema = ctx.options.meta?.schema as ZodTypeAny;
+    if (ctx.options.schema) {
+      const schema = ctx.options.schema as ZodTypeAny;
       const parsed = schema.safeParse(ctx.response!.data);
 
       if (parsed.success) {
@@ -592,10 +592,10 @@ Deno.test("can use kitchen sink", async () => {
     assert(ctx);
     assert(ctx.request);
     assertFalse(ctx.response);
-    assertFalse(ctx.meta.someMiddleware);
+    assertFalse(ctx.someMiddleware);
     called = true;
     await next();
-    assert(ctx.meta.someMiddleware);
+    assert(ctx.someMiddleware);
     assert(ctx.response);
   })
     .use(someMiddleware);
@@ -612,7 +612,7 @@ Deno.test("can use kitchen sink", async () => {
 });
 
 function someMiddleware(ctx: FetchClientContext, next: () => Promise<void>) {
-  ctx.meta.someMiddleware = true;
+  ctx.someMiddleware = true;
   return next();
 }
 
