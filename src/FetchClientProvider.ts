@@ -1,8 +1,9 @@
-import { FetchClient, type FetchClientOptions } from "./FetchClient.ts";
+import { FetchClient } from "./FetchClient.ts";
 import { Counter } from "./Counter.ts";
 import type { FetchClientMiddleware } from "./FetchClientMiddleware.ts";
 import type { ProblemDetails } from "./ProblemDetails.ts";
 import { FetchClientCache } from "./FetchClientCache.ts";
+import type { FetchClientOptions } from "./FetchClientOptions.ts";
 
 type Fetch = typeof globalThis.fetch;
 

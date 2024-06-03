@@ -1,5 +1,6 @@
-import type { FetchClient, FetchClientOptions } from "./FetchClient.ts";
+import type { FetchClient } from "./FetchClient.ts";
 import type { FetchClientMiddleware } from "./FetchClientMiddleware.ts";
+import type { FetchClientOptions } from "./FetchClientOptions.ts";
 import {
   defaultInstance as defaultProvider,
   type FetchClientProvider,

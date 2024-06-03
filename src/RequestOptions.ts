@@ -15,7 +15,8 @@ export type RequestOptions = {
   params?: Record<string, unknown>;
 
   /**
-   * The expected status codes for the response.
+   * The expected status codes for the response. If the response status code does not match any of the expected status codes, an error will be thrown.
+   * Only status codes that are specifically being handled should be included in this array.
    */
   expectedStatusCodes?: number[];
 

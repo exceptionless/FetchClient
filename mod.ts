@@ -1,4 +1,5 @@
-export * from "./src/FetchClient.ts";
+export { FetchClient } from "./src/FetchClient.ts";
+export type { FetchClientOptions } from "./src/FetchClientOptions.ts";
 export type { FetchClientResponse } from "./src/FetchClientResponse.ts";
 export { ProblemDetails } from "./src/ProblemDetails.ts";
 export { type CacheKey, FetchClientCache } from "./src/FetchClientCache.ts";
