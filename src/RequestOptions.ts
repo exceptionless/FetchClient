@@ -15,8 +15,8 @@ export type RequestOptions = {
   params?: Record<string, unknown>;
 
   /**
-   * The expected status codes for the response. If the response status code does not match any of the expected status codes, an error will be thrown.
-   * Only status codes that are specifically being handled should be included in this array.
+   * By default, non-successful status codes (outside of 200-299) will throw an error. Any status code that you wish to
+   * handle manually instead of an error being thrown should be included here.
    */
   expectedStatusCodes?: number[];
 
@@ -26,9 +26,11 @@ export type RequestOptions = {
   headers?: Record<string, string>;
 
   /**
-   * A callback function to handle errors that occur during the request.
+   * A callback function to handle non-expected errors that occur during the request. By default, non-successful status
+   * codes (outside of 200-299) are considered errors and will throw. If the callback returns true, the error will
+   * be treated as handled and ignored. If the callback returns false or doesn't return a value, the error will be thrown.
    */
-  errorCallback?: (error: Response) => void;
+  errorCallback?: (error: Response) => boolean | void;
 
   /**
    * An AbortSignal object that can be used to cancel the request.

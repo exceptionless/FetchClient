@@ -619,7 +619,10 @@ export class FetchClient {
     }
 
     if (options?.errorCallback) {
-      options.errorCallback(response);
+      const result = options.errorCallback(response);
+      if (result === true) {
+        return;
+      }
     }
 
     throw response;

@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertFalse } from "@std/assert";
+import { assert, assertEquals, assertFalse, assertRejects } from "@std/assert";
 import {
   FetchClient,
   type FetchClientContext,
@@ -336,6 +336,53 @@ Deno.test("can abort getJSON", () => {
       assertEquals(r.statusText, "The user aborted a request.");
     });
   controller.abort();
+});
+
+Deno.test("can handle error", async () => {
+  const provider = new FetchClientProvider();
+  const fakeFetch = (): Promise<Response> =>
+    new Promise((resolve) => {
+      resolve(new Response(null, { status: 404 }));
+    });
+
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
+
+  // can use expectedStatusCodes to not throw an error
+  let res = await client.getJSON(
+    "https://jsonplaceholder.typicode.com/todos/1",
+    {
+      expectedStatusCodes: [404],
+    },
+  );
+  assertFalse(res.ok);
+  assertEquals(res.status, 404);
+
+  assertRejects(async () => {
+    await client.getJSON("https://jsonplaceholder.typicode.com/todos/1");
+  });
+
+  // can use expectedStatusCodes to not throw an error
+  res = await client.getJSON(
+    "https://jsonplaceholder.typicode.com/todos/1",
+    {
+      errorCallback: () => true,
+    },
+  );
+  assertFalse(res.ok);
+  assertEquals(res.status, 404);
+
+  assertRejects(async () => {
+    await client.getJSON("https://jsonplaceholder.typicode.com/todos/1", {
+      errorCallback: () => false,
+    });
+  });
+
+  assertRejects(async () => {
+    await client.getJSON("https://jsonplaceholder.typicode.com/todos/1", {
+      errorCallback: () => {},
+    });
+  });
 });
 
 Deno.test("will validate postJSON model with provider model validator", async () => {
