@@ -30,10 +30,12 @@ export class FetchClient {
       this.#provider = optionsOrProvider;
     } else {
       this.#provider = optionsOrProvider?.provider ?? getCurrentProvider();
-      this.#options = {
-        ...this.#provider.options,
-        ...optionsOrProvider,
-      };
+      if (optionsOrProvider) {
+        this.#options = {
+          ...this.#provider.options,
+          ...optionsOrProvider,
+        };
+      }
     }
   }
 
