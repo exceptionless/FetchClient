@@ -507,7 +507,7 @@ export class FetchClient {
         "application/problem+json",
       )
     ) {
-      jsonResponse.problem = data as ProblemDetails;
+      jsonResponse.problem = Object.assign(new ProblemDetails(), data);
       jsonResponse.data = null;
       return jsonResponse;
     }
