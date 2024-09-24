@@ -15,6 +15,11 @@ export type RequestOptions = {
   params?: Record<string, unknown>;
 
   /**
+   * By default, the client will throw an error on non-successful and unexpected status codes (outside of 200-299). Use this option to disable that behavior off.
+   */
+  shouldThrowOnUnexpectedStatusCodes?: boolean;
+
+  /**
    * By default, non-successful status codes (outside of 200-299) will throw an error. Any status code that you wish to
    * handle manually instead of an error being thrown should be included here.
    */

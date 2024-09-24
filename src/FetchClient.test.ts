@@ -362,7 +362,17 @@ Deno.test("can handle error", async () => {
     await client.getJSON("https://jsonplaceholder.typicode.com/todos/1");
   });
 
-  // can use expectedStatusCodes to not throw an error
+  // can use shouldThrowOnUnexpectedStatusCodes to not throw an error
+  res = await client.getJSON(
+    "https://jsonplaceholder.typicode.com/todos/1",
+    {
+      shouldThrowOnUnexpectedStatusCodes: false,
+    },
+  );
+  assertFalse(res.ok);
+  assertEquals(res.status, 404);
+
+  // can use errorCallback to not throw an error
   res = await client.getJSON(
     "https://jsonplaceholder.typicode.com/todos/1",
     {

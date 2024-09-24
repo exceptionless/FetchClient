@@ -607,7 +607,7 @@ export class FetchClient {
       throw new Error("Response is null");
     }
 
-    if (response.ok) {
+    if (response.ok || options?.shouldThrowOnUnexpectedStatusCodes === false) {
       return;
     }
 
