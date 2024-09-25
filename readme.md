@@ -134,6 +134,32 @@ Also, take a look at the tests:
 
 [FetchClient Tests](src/FetchClient.test.ts)
 
+## Contributing
+
+Run tests:
+
+```shell
+deno test --allow-net
+```
+
+Lint code:
+
+```shell
+deno lint
+```
+
+Format code:
+
+```shell
+deno fmt
+```
+
+Type check code:
+
+```shell
+deno check scripts/*.ts *.ts src/*.ts
+```
+
 ## License
 
 MIT © [Exceptionless](https://exceptionless.com)
