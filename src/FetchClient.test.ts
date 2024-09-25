@@ -382,6 +382,16 @@ Deno.test("can handle error", async () => {
   assertFalse(res.ok);
   assertEquals(res.status, 404);
 
+  // can use errorCallback to throw custom error
+  const error = await assertRejects(async () => {
+    await client.getJSON("https://jsonplaceholder.typicode.com/todos/1", {
+      errorCallback: (res) => {
+        throw res.problem ?? res;
+      },
+    });
+  });
+  assert(error instanceof ProblemDetails);
+
   assertRejects(async () => {
     await client.getJSON("https://jsonplaceholder.typicode.com/todos/1", {
       errorCallback: () => false,

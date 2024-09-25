@@ -1,4 +1,5 @@
 import type { CacheKey } from "./FetchClientCache.ts";
+import type { FetchClientResponse } from "./FetchClientResponse.ts";
 
 /**
  * Represents the options for making a request using the FetchClient.
@@ -35,7 +36,7 @@ export type RequestOptions = {
    * codes (outside of 200-299) are considered errors and will throw. If the callback returns true, the error will
    * be treated as handled and ignored. If the callback returns false or doesn't return a value, the error will be thrown.
    */
-  errorCallback?: (error: Response) => boolean | void;
+  errorCallback?: (error: FetchClientResponse<unknown>) => boolean | void;
 
   /**
    * An AbortSignal object that can be used to cancel the request.

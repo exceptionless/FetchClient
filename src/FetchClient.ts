@@ -600,7 +600,7 @@ export class FetchClient {
   }
 
   private validateResponse(
-    response: Response | null,
+    response: FetchClientResponse<unknown> | null,
     options: RequestOptions | undefined,
   ) {
     if (!response) {
