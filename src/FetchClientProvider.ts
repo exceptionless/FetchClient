@@ -4,6 +4,7 @@ import type { FetchClientMiddleware } from "./FetchClientMiddleware.ts";
 import type { ProblemDetails } from "./ProblemDetails.ts";
 import { FetchClientCache } from "./FetchClientCache.ts";
 import type { FetchClientOptions } from "./FetchClientOptions.ts";
+import { ObjectEvent } from "./ObjectEvent.ts";
 
 type Fetch = typeof globalThis.fetch;
 
@@ -15,6 +16,7 @@ export class FetchClientProvider {
   #fetch?: Fetch;
   #cache: FetchClientCache;
   #counter = new Counter();
+  #onLoading = new ObjectEvent<boolean>();
 
   /**
    * Creates a new instance of FetchClientProvider.
@@ -31,6 +33,18 @@ export class FetchClientProvider {
       providerCounter: this.#counter,
       fetch: this.#fetch,
     };
+
+    this.#counter.changed.on((e) => {
+      if (!e) {
+        throw new Error("Event data is required.");
+      }
+
+      if (e.value > 0 && e.previous == 0) {
+        this.#onLoading.trigger(true);
+      } else if (e.value == 0 && e.previous > 0) {
+        this.#onLoading.trigger(false);
+      }
+    });
   }
 
   /**
@@ -52,6 +66,13 @@ export class FetchClientProvider {
    */
   public get isLoading(): boolean {
     return this.#counter.count > 0;
+  }
+
+  /**
+   * Gets an event that is triggered when the loading state changes.
+   */
+  public get loading() {
+    return this.#onLoading.expose();
   }
 
   /**

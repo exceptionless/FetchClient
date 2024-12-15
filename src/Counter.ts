@@ -1,17 +1,11 @@
+import { ObjectEvent } from "./ObjectEvent.ts";
+
 /**
  * Represents a counter that can be incremented and decremented.
  */
 export class Counter {
   #count: number = 0;
-  #onChange: ((count: number) => void) | undefined;
-
-  /**
-   * Creates a new instance of the Counter class.
-   * @param onChange - Optional callback function that will be called whenever the count changes.
-   */
-  constructor(onChange?: (count: number) => void) {
-    this.#onChange = onChange;
-  }
+  #onChange = new ObjectEvent<{ previous: number; value: number }>();
 
   /**
    * Gets the current count.
@@ -21,22 +15,27 @@ export class Counter {
   }
 
   /**
+   * Gets an event that is triggered when the count changes.
+   */
+  public get changed() {
+    return this.#onChange.expose();
+  }
+
+  /**
    * Increments the count by 1.
    */
   increment() {
+    const previous = this.#count;
     this.#count++;
-    if (this.#onChange) {
-      this.#onChange(this.#count);
-    }
+    this.#onChange.trigger({ previous, value: this.#count });
   }
 
   /**
    * Decrements the count by 1.
    */
   decrement() {
+    const previous = this.#count;
     this.#count--;
-    if (this.#onChange) {
-      this.#onChange(this.#count);
-    }
+    this.#onChange.trigger({ previous, value: this.#count });
   }
 }

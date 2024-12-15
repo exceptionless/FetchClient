@@ -347,6 +347,21 @@ Deno.test("can get loading status", async () => {
   assertFalse(api.isLoading);
 });
 
+Deno.test("can use loading event", async () => {
+  const api = new FetchClient();
+  let called = false;
+  api.loading.on((isLoading) => {
+    called = true;
+    console.log(`Loading: ${isLoading}`);
+  });
+  const response = api.getJSON("https://jsonplaceholder.typicode.com/todos/1");
+  assert(api.isLoading);
+
+  await response;
+  assert(called);
+  assertFalse(api.isLoading);
+});
+
 Deno.test("can handle error", async () => {
   const provider = new FetchClientProvider();
   const fakeFetch = (): Promise<Response> =>
