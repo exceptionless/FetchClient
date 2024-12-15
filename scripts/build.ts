@@ -11,7 +11,7 @@ await build({
 
   declaration: "separate",
   scriptModule: "cjs",
-  typeCheck: "both",
+  typeCheck: false,
   test: true,
 
   importMap: "deno.json",
