@@ -3,12 +3,16 @@
   "exports": "./mod.ts",
   "name": "@exceptionless/fetchclient",
   "tasks": {
-    "build": "deno run -A scripts/build.ts"
+    "build": "deno run -A scripts/build.ts",
+    "check": "deno check scripts/*.ts *.ts src/*.ts",
+    "format-check": "deno fmt --check",
+    "lint": "deno lint",
+    "test": "deno test --allow-net"
   },
   "imports": {
-    "@deno/dnt": "jsr:@deno/dnt@^0.41.2",
-    "@std/assert": "jsr:@std/assert@0.225.3",
-    "@std/path": "jsr:@std/path@^0.225.1"
+    "@deno/dnt": "jsr:@deno/dnt@^0.41.3",
+    "@std/assert": "jsr:@std/assert@^1.0.9",
+    "@std/path": "jsr:@std/path@^1.0.8"
   },
   "exclude": ["npm"]
 }
