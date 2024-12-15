@@ -29,9 +29,9 @@ jobs:
           cat deno.json
 
       - name: Setup Deno
-        uses: denoland/setup-deno@v1
+        uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.x
+          deno-version: v2.x
 
       - name: Code Style
         run: deno fmt --check
@@ -55,9 +55,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Deno
-        uses: denoland/setup-deno@v1
+        uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.x
+          deno-version: v2.x
 
       - name: Tests
         run: |
@@ -81,9 +81,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: denoland/setup-deno@v1
+      - uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.x
+          deno-version: v2.x
 
       - name: Build NPM Package
         run: deno task build ${{ needs.lint.outputs.version }}
