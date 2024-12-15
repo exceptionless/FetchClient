@@ -1,4 +1,4 @@
-import { ObjectEvent } from "./ObjectEvent.ts";
+import { type IObjectEvent, ObjectEvent } from "./ObjectEvent.ts";
 
 /**
  * Represents a counter that can be incremented and decremented.
@@ -17,7 +17,7 @@ export class Counter {
   /**
    * Gets an event that is triggered when the count changes.
    */
-  public get changed() {
+  public get changed(): IObjectEvent<{ previous: number; value: number }> {
     return this.#onChange.expose();
   }
 

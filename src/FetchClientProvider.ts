@@ -4,7 +4,7 @@ import type { FetchClientMiddleware } from "./FetchClientMiddleware.ts";
 import type { ProblemDetails } from "./ProblemDetails.ts";
 import { FetchClientCache } from "./FetchClientCache.ts";
 import type { FetchClientOptions } from "./FetchClientOptions.ts";
-import { ObjectEvent } from "./ObjectEvent.ts";
+import { type IObjectEvent, ObjectEvent } from "./ObjectEvent.ts";
 
 type Fetch = typeof globalThis.fetch;
 
@@ -71,7 +71,7 @@ export class FetchClientProvider {
   /**
    * Gets an event that is triggered when the loading state changes.
    */
-  public get loading() {
+  public get loading(): IObjectEvent<boolean> {
     return this.#onLoading.expose();
   }
 
