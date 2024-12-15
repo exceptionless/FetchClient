@@ -338,6 +338,15 @@ Deno.test("can abort getJSON", () => {
   controller.abort();
 });
 
+Deno.test("can get loading status", async () => {
+  const api = new FetchClient();
+  const response = api.getJSON("https://jsonplaceholder.typicode.com/todos/1");
+  assert(api.isLoading);
+
+  await response;
+  assertFalse(api.isLoading);
+});
+
 Deno.test("can handle error", async () => {
   const provider = new FetchClientProvider();
   const fakeFetch = (): Promise<Response> =>

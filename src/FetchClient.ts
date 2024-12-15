@@ -78,7 +78,7 @@ export class FetchClient {
    * Gets a value indicating whether the client is currently loading.
    * @returns {boolean} A boolean value indicating whether the client is loading.
    */
-  public get loading(): boolean {
+  public get isLoading(): boolean {
     return this.requestCount > 0;
   }
 
