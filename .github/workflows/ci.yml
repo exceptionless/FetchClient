@@ -6,7 +6,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -43,7 +43,7 @@ jobs:
         run: deno check scripts/*.ts *.ts src/*.ts
 
   deno:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: lint
     permissions:
       contents: read
@@ -69,7 +69,7 @@ jobs:
         run: deno publish --allow-dirty
 
   npm:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: lint
     permissions:
       contents: read
