@@ -370,7 +370,7 @@ export class FetchClient {
       options,
       {
         method: "DELETE",
-        headers: options?.headers ?? {},
+        headers: { "Content-Type": "application/json", ...options?.headers },
       },
     );
   }
