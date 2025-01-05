@@ -277,11 +277,17 @@ Deno.test("can putJSON with client middleware", async () => {
   assertEquals(r.data!.completed, false);
 });
 
-Deno.test("can delete with client middleware", async () => {
+Deno.test("can deleteJSON with client middleware", async () => {
   const provider = new FetchClientProvider();
   const fakeFetch = (): Promise<Response> =>
     new Promise((resolve) => {
-      resolve(new Response());
+      const data = JSON.stringify({
+        userId: 1,
+        id: 1,
+        title: "A random title",
+        completed: false,
+      });
+      resolve(new Response(data));
     });
 
   provider.fetch = fakeFetch;
@@ -297,10 +303,17 @@ Deno.test("can delete with client middleware", async () => {
   });
   assert(client);
 
-  const r = await client.delete("https://jsonplaceholder.typicode.com/todos/1");
+  const r = await client.deleteJSON<Todo>(
+    "https://jsonplaceholder.typicode.com/todos/1",
+  );
   assert(r.ok);
   assertEquals(r.status, 200);
+  assert(r.data);
   assert(called);
+  assertEquals(r.data!.userId, 1);
+  assertEquals(r.data!.id, 1);
+  assertEquals(r.data!.title, "A random title");
+  assertEquals(r.data!.completed, false);
 });
 
 Deno.test("can abort getJSON", () => {

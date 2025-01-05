@@ -375,6 +375,21 @@ export class FetchClient {
     );
   }
 
+  /**
+   * Sends a DELETE request with JSON payload to the specified URL.
+   *
+   * @template T - The type of the response data.
+   * @param {string} url - The URL to send the request to.
+   * @param {RequestOptions} [options] - Additional options for the request.
+   * @returns {Promise<FetchClientResponse<T>>} - A promise that resolves to the response data.
+   */
+  deleteJSON<T>(
+    url: string,
+    options?: RequestOptions,
+  ): Promise<FetchClientResponse<T>> {
+    return this.delete(url, options) as Promise<FetchClientResponse<T>>;
+  }
+
   private async validate(
     data: unknown,
     options?: RequestOptions,
