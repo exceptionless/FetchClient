@@ -21,12 +21,10 @@ jobs:
       - name: Build Version
         id: version
         run: |
-          dotnet tool install --global minver-cli --version 5.0.0
+          dotnet tool install --global minver-cli --version 6.0.0
           version=$(minver --tag-prefix v)
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "### Version: $version" >> $GITHUB_STEP_SUMMARY
-          sed -i -e "s/0.0.0/$version/" deno.json
-          cat deno.json
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
