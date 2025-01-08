@@ -1,5 +1,5 @@
 <!-- deno-fmt-ignore-file -->
-# FetchClient [![CI](https://github.com/exceptionless/fetchclient/workflows/CI/badge.svg)](https://github.com/exceptionless/fetchclient/actions?query=workflow%3ACI) [![JSR](https://jsr.io/badges/@exceptionless/fetchclient)](https://jsr.io/@exceptionless/fetchclient)
+# FetchClient [![CI](https://github.com/exceptionless/fetchclient/workflows/CI/badge.svg)](https://github.com/exceptionless/fetchclient/actions?query=workflow%3ACI) [![NPM](https://img.shields.io/npm/v/%40exceptionless%2Ffetchclient)](https://www.npmjs.com/package/@exceptionless/fetchclient) [![JSR](https://jsr.io/badges/@exceptionless/fetchclient)](https://jsr.io/@exceptionless/fetchclient)
 
 FetchClient is a library that makes it easier to use the fetch API for JSON APIs. It provides the following features:
 
