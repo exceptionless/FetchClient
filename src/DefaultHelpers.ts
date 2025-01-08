@@ -5,17 +5,97 @@ import {
   defaultInstance as defaultProvider,
   type FetchClientProvider,
 } from "./FetchClientProvider.ts";
+import type { FetchClientResponse } from "./FetchClientResponse.ts";
 import type { ProblemDetails } from "./ProblemDetails.ts";
-import type { RequestOptions } from "./RequestOptions.ts";
+import type { GetRequestOptions, RequestOptions } from "./RequestOptions.ts";
 
 let getCurrentProviderFunc: () => FetchClientProvider | null = () => null;
 
 /**
- * Gets a FetchClient instance.
+ * Gets a FetchClient instance from the current provider.
  * @returns The FetchClient instance.
  */
 export function useFetchClient(options?: FetchClientOptions): FetchClient {
   return getCurrentProvider().getFetchClient(options);
+}
+
+/**
+ * Sends a GET request to the specified URL using the default client and provider and returns the response as JSON.
+ * @param url - The URL to send the GET request to.
+ * @param options - Optional request options.
+ * @returns A promise that resolves to the response as JSON.
+ */
+export function getJSON<T>(
+  url: string,
+  options?: GetRequestOptions,
+): Promise<FetchClientResponse<T>> {
+  return useFetchClient().getJSON(url, options);
+}
+
+/**
+ * Sends a POST request with JSON payload using the default client and provider to the specified URL.
+ *
+ * @template T - The type of the response data.
+ * @param {string} url - The URL to send the request to.
+ * @param {object | string | FormData} [body] - The JSON payload or form data to send with the request.
+ * @param {RequestOptions} [options] - Additional options for the request.
+ * @returns {Promise<FetchClientResponse<T>>} - A promise that resolves to the response data.
+ */
+export function postJSON<T>(
+  url: string,
+  body?: object | string | FormData,
+  options?: RequestOptions,
+): Promise<FetchClientResponse<T>> {
+  return useFetchClient().postJSON(url, body, options);
+}
+
+/**
+ * Sends a PUT request with JSON payload using the default client and provider to the specified URL.
+ *
+ * @template T - The type of the response data.
+ * @param {string} url - The URL to send the request to.
+ * @param {object | string} [body] - The JSON payload to send with the request.
+ * @param {RequestOptions} [options] - Additional options for the request.
+ * @returns {Promise<FetchClientResponse<T>>} - A promise that resolves to the response data.
+ */
+export function putJSON<T>(
+  url: string,
+  body?: object | string,
+  options?: RequestOptions,
+): Promise<FetchClientResponse<T>> {
+  return useFetchClient().putJSON(url, body, options);
+}
+
+/**
+ * Sends a PATCH request with JSON payload using the default client and provider to the specified URL.
+ *
+ * @template T - The type of the response data.
+ * @param {string} url - The URL to send the request to.
+ * @param {object | string} [body] - The JSON payload to send with the request.
+ * @param {RequestOptions} [options] - Additional options for the request.
+ * @returns {Promise<FetchClientResponse<T>>} - A promise that resolves to the response data.
+ */
+export function patchJSON<T>(
+  url: string,
+  body?: object | string,
+  options?: RequestOptions,
+): Promise<FetchClientResponse<T>> {
+  return useFetchClient().patchJSON(url, body, options);
+}
+
+/**
+ * Sends a DELETE request with JSON payload using the default client and provider to the specified URL.
+ *
+ * @template T - The type of the response data.
+ * @param {string} url - The URL to send the request to.
+ * @param {RequestOptions} [options] - Additional options for the request.
+ * @returns {Promise<FetchClientResponse<T>>} - A promise that resolves to the response data.
+ */
+export function deleteJSON<T>(
+  url: string,
+  options?: RequestOptions,
+): Promise<FetchClientResponse<T>> {
+  return useFetchClient().deleteJSON(url, options);
 }
 
 /**

@@ -2,12 +2,13 @@ import { assert, assertEquals, assertFalse, assertRejects } from "@std/assert";
 import {
   FetchClient,
   type FetchClientContext,
+  getJSON,
   ProblemDetails,
   setBaseUrl,
   useFetchClient,
 } from "../mod.ts";
 import { FetchClientProvider } from "./FetchClientProvider.ts";
-import { z, type ZodTypeAny } from "https://deno.land/x/zod@v3.23.8/mod.ts";
+import { z, type ZodTypeAny } from "zod";
 
 export const TodoSchema = z.object({
   userId: z.number(),
@@ -32,7 +33,7 @@ Deno.test("can getJSON", async () => {
 });
 
 Deno.test("can use function", async () => {
-  const res = await useFetchClient().getJSON<Products>(
+  const res = await getJSON<Products>(
     `https://dummyjson.com/products/search?q=iphone&limit=10`,
   );
 
@@ -659,6 +660,52 @@ Deno.test("can use reviver", async () => {
 
   assertEquals(res.status, 200);
   assert(res.data);
+  assert(res.data.completedTime instanceof Date);
+});
+
+Deno.test("can parse dates and use reviver", async () => {
+  const provider = new FetchClientProvider();
+  const fakeFetch = (): Promise<Response> =>
+    new Promise((resolve) => {
+      const data = JSON.stringify({
+        userId: 1,
+        id: 1,
+        title: "A random title",
+        completed: false,
+        completedTime: "2021-01-01T00:00:00.000Z",
+      });
+      resolve(new Response(data));
+    });
+
+  provider.fetch = fakeFetch;
+
+  const api = provider.getFetchClient();
+
+  let res = await api.getJSON<Todo>(
+    `https://jsonplaceholder.typicode.com/todos/1`,
+  );
+
+  assertEquals(res.status, 200);
+  assert(res.data);
+  assertEquals(res.data.title, "A random title");
+  assertFalse(res.data.completedTime instanceof Date);
+
+  res = await api.getJSON<Todo>(
+    `https://jsonplaceholder.typicode.com/todos/1`,
+    {
+      shouldParseDates: true,
+      reviver: (key: string, value: unknown) => {
+        if (key === "title") {
+          return "revived";
+        }
+        return value;
+      },
+    },
+  );
+
+  assertEquals(res.status, 200);
+  assert(res.data);
+  assertEquals(res.data.title, "revived");
   assert(res.data.completedTime instanceof Date);
 });
 

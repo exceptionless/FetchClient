@@ -520,13 +520,11 @@ export class FetchClient {
   ): Promise<FetchClientResponse<T>> {
     let data = null;
     try {
-      if (options.reviver) {
+      if (options.reviver || options.shouldParseDates) {
         const body = await response.text();
-        data = JSON.parse(body, options.reviver);
-      } else if (options.shouldParseDates) {
-        // TODO: Combine reviver and shouldParseDates into a single function
-        const body = await response.text();
-        data = JSON.parse(body, this.parseDates);
+        data = JSON.parse(body, (key, value) => {
+          return this.reviveJsonValue(options, key, value);
+        });
       } else {
         data = await response.json();
       }
@@ -554,7 +552,25 @@ export class FetchClient {
     return jsonResponse;
   }
 
-  private parseDates(this: unknown, _key: string, value: unknown): unknown {
+  private reviveJsonValue(
+    options: RequestOptions,
+    key: string,
+    value: unknown,
+  ): unknown {
+    let revivedValued = value;
+
+    if (options.reviver) {
+      revivedValued = options.reviver.call(this, key, revivedValued);
+    }
+
+    if (options.shouldParseDates) {
+      revivedValued = this.tryParseDate(key, revivedValued);
+    }
+
+    return revivedValued;
+  }
+
+  private tryParseDate(_key: string, value: unknown): unknown {
     if (typeof value !== "string") {
       return value;
     }

@@ -3,11 +3,11 @@
 
 FetchClient is a library that makes it easier to use the fetch API for JSON APIs. It provides the following features:
 
-* Makes fetch easier to use for JSON APIs
-* Automatic model validation
-* Caching
-* Middleware
-* Problem Details support
+* [Makes fetch easier to use for JSON APIs](#typed-response)
+* [Automatic model validation](#model-validator)
+* [Caching](#caching)
+* [Middleware](#middleware)
+* [Problem Details](https://www.rfc-editor.org/rfc/rfc9457.html) support
 * Option to parse dates in responses
 
 ## Install
@@ -22,7 +22,7 @@ npm install --save @exceptionless/fetchclient
 
 ## Usage
 
-Get a typed JSON response:
+### Typed Response
 
 ```ts
 import { FetchClient } from '@exceptionless/fetchclient';
@@ -39,23 +39,23 @@ const response = await client.getJSON<Products>(
 const products = response.data;
 ```
 
-Get a typed JSON response using a function:
+### Typed Response Using a Function
 
 ```ts
-import { useFetchClient } from '@exceptionless/fetchclient';
+import { getJSON } from '@exceptionless/fetchclient';
 
 type Products = {
   products: Array<{ id: number; name: string }>;
 };
 
-const response = await useFetchClient().getJSON<Products>(
+const response = await getJSON<Products>(
   `https://dummyjson.com/products/search?q=iphone&limit=10`,
 );
 
 const products = response.data;
 ```
 
-Use a model validator:
+### Model Validator
 
 ```ts
 import { FetchClient, setModelValidator } from '@exceptionless/fetchclient';
@@ -89,7 +89,7 @@ if (!response.ok) {
 }
 ```
 
-Use caching:
+### Caching
 
 ```ts
 import { FetchClient } from '@exceptionless/fetchclient';
@@ -109,7 +109,7 @@ const response = await client.getJSON<Todo>(
 client.cache.delete(["todos", "1"]);
 ```
 
-Use middleware:
+### Middleware
 
 ```ts
 import { FetchClient, useMiddleware } from '@exceptionless/fetchclient';
@@ -139,7 +139,7 @@ Also, take a look at the tests:
 Run tests:
 
 ```shell
-deno test --allow-net
+deno run test
 ```
 
 Lint code:
@@ -157,7 +157,7 @@ deno fmt
 Type check code:
 
 ```shell
-deno check scripts/*.ts *.ts src/*.ts
+deno run check
 ```
 
 ## License
