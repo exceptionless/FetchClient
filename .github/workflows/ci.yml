@@ -59,6 +59,11 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Set Version
+        run: |
+          sed -i -e "s/0.0.0/${{ needs.lint.outputs.version }}/" deno.json
+          cat deno.json
+
       - name: Tests
         run: |
           deno test --allow-net --coverage=cov/
