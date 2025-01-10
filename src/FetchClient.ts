@@ -485,12 +485,29 @@ export class FetchClient {
     this.#counter.increment();
     this.#provider.counter.increment();
 
+    let request: Request | null = null;
+
+    try {
+      request = new Request(url, init);
+    } catch {
+      // try converting to absolute URL
+      const origin = globalThis.location?.origin ?? "http://localhost";
+      if (!url.startsWith("http")) {
+        if (url.startsWith("/")) {
+          request = new Request(origin + url, init);
+        } else {
+          request = new Request(origin + url, init);
+        }
+      }
+    }
+
     const context: FetchClientContext = {
       options,
-      request: new Request(url, init),
+      request: request!,
       response: null,
       meta: {},
     };
+
     await this.invokeMiddleware(context, middleware);
 
     this.#counter.decrement();
@@ -619,21 +636,23 @@ export class FetchClient {
   }
 
   private buildUrl(url: string, options: RequestOptions | undefined): string {
-    if (url.startsWith("/")) {
-      url = url.substring(1);
+    let builtUrl = url;
+
+    if (!builtUrl.startsWith("http") && this.options?.baseUrl) {
+      if (this.options.baseUrl.endsWith("/") || builtUrl.startsWith("/")) {
+        builtUrl = this.options.baseUrl + builtUrl;
+      } else {
+        builtUrl = this.options.baseUrl + "/" + builtUrl;
+      }
     }
 
-    if (!url.startsWith("http") && this.options?.baseUrl) {
-      url = this.options.baseUrl + "/" + url;
-    }
-
-    const isAbsoluteUrl = url.startsWith("http");
+    const isAbsoluteUrl = builtUrl.startsWith("http");
 
     const origin: string | undefined = isAbsoluteUrl
       ? undefined
-      : globalThis.location?.origin ?? undefined;
+      : globalThis.location?.origin ?? "http://localhost";
 
-    const parsed = new URL(url, origin);
+    const parsed = new URL(builtUrl, origin);
 
     if (options?.params) {
       for (const [key, value] of Object.entries(options?.params)) {
@@ -644,10 +663,13 @@ export class FetchClient {
         }
       }
 
-      url = parsed.toString();
+      builtUrl = parsed.toString();
     }
 
-    const result = isAbsoluteUrl ? url : `${parsed.pathname}${parsed.search}`;
+    const result = isAbsoluteUrl
+      ? builtUrl
+      : `${parsed.pathname}${parsed.search}`;
+
     return result;
   }
 

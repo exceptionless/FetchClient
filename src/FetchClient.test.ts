@@ -762,6 +762,46 @@ Deno.test("can use kitchen sink", async () => {
   assert(optionsCalled);
 });
 
+Deno.test("can getJSON relative URL", async () => {
+  const provider = new FetchClientProvider();
+  let requestedUrl = "";
+  const fakeFetch = (req: URL | Request | string): Promise<Response> =>
+    new Promise((resolve) => {
+      if (typeof req === "string") {
+        requestedUrl = req;
+      } else if (req instanceof Request) {
+        requestedUrl = req.url;
+      } else {
+        requestedUrl = req.toString();
+      }
+      const data = JSON.stringify({});
+      resolve(new Response(data));
+    });
+
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
+
+  await client.getJSON<Products>(
+    `/todos/1`,
+    {
+      params: {
+        limit: 3,
+      },
+    },
+  );
+  assertEquals(requestedUrl, "http://localhost/todos/1?limit=3");
+
+  await client.getJSON<Products>(
+    `todos/1`,
+    {
+      params: {
+        limit: 3,
+      },
+    },
+  );
+  assertEquals(requestedUrl, "http://localhost/todos/1?limit=3");
+});
+
 function someMiddleware(ctx: FetchClientContext, next: () => Promise<void>) {
   ctx.someMiddleware = true;
   return next();
