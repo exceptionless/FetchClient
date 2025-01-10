@@ -414,7 +414,7 @@ export class FetchClient {
     options: RequestOptions,
     init?: RequestInit,
   ): Promise<FetchClientResponse<T>> {
-    url = this.buildUrl(url, options);
+    const { builtUrl, absoluteUrl } = this.buildUrl(url, options);
 
     const accessToken = this.options.accessTokenFunc?.() ?? null;
     if (accessToken !== null) {
@@ -488,17 +488,10 @@ export class FetchClient {
     let request: Request | null = null;
 
     try {
-      request = new Request(url, init);
+      request = new Request(builtUrl, init);
     } catch {
-      // try converting to absolute URL
-      const origin = globalThis.location?.origin ?? "http://localhost";
-      if (!url.startsWith("http")) {
-        if (url.startsWith("/")) {
-          request = new Request(origin + url, init);
-        } else {
-          request = new Request(origin + url, init);
-        }
-      }
+      // try using absolute URL
+      request = new Request(absoluteUrl, init);
     }
 
     const context: FetchClientContext = {
@@ -635,7 +628,10 @@ export class FetchClient {
     };
   }
 
-  private buildUrl(url: string, options: RequestOptions | undefined): string {
+  private buildUrl(
+    url: string,
+    options: RequestOptions | undefined,
+  ): { builtUrl: string; absoluteUrl: string } {
     let builtUrl = url;
 
     if (!builtUrl.startsWith("http") && this.options?.baseUrl) {
@@ -647,15 +643,26 @@ export class FetchClient {
     }
 
     const isAbsoluteUrl = builtUrl.startsWith("http");
-    const localhostOrigin = builtUrl.startsWith("/")
-      ? "http://localhost"
-      : "http://localhost/";
 
-    const origin: string | undefined = isAbsoluteUrl
-      ? undefined
-      : globalThis.location?.origin ?? localhostOrigin;
-
-    const parsed = origin ? new URL(builtUrl, origin) : new URL(builtUrl);
+    let parsed: URL | undefined = undefined;
+    if (isAbsoluteUrl) {
+      parsed = new URL(builtUrl);
+    } else if (
+      globalThis.location?.origin &&
+      globalThis.location?.origin.startsWith("http")
+    ) {
+      if (builtUrl.startsWith("/")) {
+        parsed = new URL(builtUrl, globalThis.location.origin);
+      } else {
+        parsed = new URL(builtUrl, globalThis.location.origin + "/");
+      }
+    } else {
+      if (builtUrl.startsWith("/")) {
+        parsed = new URL(builtUrl, "http://localhost");
+      } else {
+        parsed = new URL(builtUrl, "http://localhost/");
+      }
+    }
 
     if (options?.params) {
       for (const [key, value] of Object.entries(options?.params)) {
@@ -665,15 +672,16 @@ export class FetchClient {
           parsed.searchParams.set(key, value as string);
         }
       }
-
-      builtUrl = parsed.toString();
     }
+
+    builtUrl = parsed.toString();
 
     const result = isAbsoluteUrl
       ? builtUrl
       : `${parsed.pathname}${parsed.search}`;
 
-    return result;
+    console.log(builtUrl, result);
+    return { builtUrl: result, absoluteUrl: builtUrl };
   }
 
   private validateResponse(
