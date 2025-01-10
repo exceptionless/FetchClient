@@ -767,31 +767,21 @@ Deno.test("can getJSON relative URL", async () => {
   let requestedUrl = "";
   const fakeFetch = (req: URL | Request | string): Promise<Response> =>
     new Promise((resolve) => {
-      if (typeof req === "string") {
-        requestedUrl = req;
-      } else if (req instanceof Request) {
+      if (req instanceof Request) {
         requestedUrl = req.url;
       } else {
         requestedUrl = req.toString();
       }
-      const data = JSON.stringify({});
-      resolve(new Response(data));
+      resolve(new Response());
     });
 
   provider.fetch = fakeFetch;
   const client = provider.getFetchClient();
 
-  await client.getJSON<Products>(
-    `/todos/1`,
-    {
-      params: {
-        limit: 3,
-      },
-    },
-  );
-  assertEquals(requestedUrl, "http://localhost/todos/1?limit=3");
+  await client.getJSON(`/todos/1`);
+  assertEquals(requestedUrl, "http://localhost/todos/1");
 
-  await client.getJSON<Products>(
+  await client.getJSON(
     `todos/1`,
     {
       params: {

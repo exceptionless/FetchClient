@@ -647,12 +647,15 @@ export class FetchClient {
     }
 
     const isAbsoluteUrl = builtUrl.startsWith("http");
+    const localhostOrigin = builtUrl.startsWith("/")
+      ? "http://localhost"
+      : "http://localhost/";
 
     const origin: string | undefined = isAbsoluteUrl
       ? undefined
-      : globalThis.location?.origin ?? "http://localhost";
+      : globalThis.location?.origin ?? localhostOrigin;
 
-    const parsed = new URL(builtUrl, origin);
+    const parsed = origin ? new URL(builtUrl, origin) : new URL(builtUrl);
 
     if (options?.params) {
       for (const [key, value] of Object.entries(options?.params)) {
