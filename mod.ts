@@ -6,5 +6,8 @@ export { type CacheKey, FetchClientCache } from "./src/FetchClientCache.ts";
 export type { RequestOptions } from "./src/RequestOptions.ts";
 export type { FetchClientMiddleware } from "./src/FetchClientMiddleware.ts";
 export type { FetchClientContext } from "./src/FetchClientContext.ts";
-export { FetchClientProvider } from "./src/FetchClientProvider.ts";
+export {
+  defaultInstance as defaultProviderInstance,
+  FetchClientProvider,
+} from "./src/FetchClientProvider.ts";
 export * from "./src/DefaultHelpers.ts";
