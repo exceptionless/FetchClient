@@ -680,7 +680,6 @@ export class FetchClient {
       ? builtUrl
       : `${parsed.pathname}${parsed.search}`;
 
-    console.log(builtUrl, result);
     return { builtUrl: result, absoluteUrl: builtUrl };
   }
 
