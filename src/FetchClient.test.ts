@@ -1,10 +1,4 @@
-import {
-  assert,
-  assertEquals,
-  assertFalse,
-  assertRejects,
-  assertThrows,
-} from "@std/assert";
+import { assert, assertEquals, assertFalse, assertRejects } from "@std/assert";
 import {
   FetchClient,
   type FetchClientContext,
