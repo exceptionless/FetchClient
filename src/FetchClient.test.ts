@@ -352,7 +352,7 @@ Deno.test("can abort getJSON", () => {
   controller.abort();
 });
 
-Deno.test.only("can getJSON with timeout", async () => {
+Deno.test("can getJSON with timeout", async () => {
   const provider = new FetchClientProvider();
   const controller = new AbortController();
 
