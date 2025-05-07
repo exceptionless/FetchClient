@@ -453,39 +453,54 @@ export class FetchClient {
         }
       }
 
-      const response =
-        await (this.fetch ? this.fetch(ctx.request) : fetch(ctx.request));
+      try {
+        const response =
+          await (this.fetch ? this.fetch(ctx.request) : fetch(ctx.request));
 
-      if (
-        ctx.request.headers.get("Content-Type")?.startsWith(
-          "application/json",
-        ) ||
-        ctx.request.headers.get("Accept")?.startsWith("application/json") ||
-        response?.headers.get("Content-Type")?.startsWith(
-          "application/problem+json",
-        )
-      ) {
-        ctx.response = await this.getJSONResponse<T>(response, ctx.options);
-      } else {
-        ctx.response = response as FetchClientResponse<T>;
-        ctx.response.data = null;
-        ctx.response.problem = new ProblemDetails();
-      }
+        if (
+          ctx.request.headers.get("Content-Type")?.startsWith(
+            "application/json",
+          ) ||
+          ctx.request.headers.get("Accept")?.startsWith("application/json") ||
+          response?.headers.get("Content-Type")?.startsWith(
+            "application/problem+json",
+          )
+        ) {
+          ctx.response = await this.getJSONResponse<T>(response, ctx.options);
+        } else {
+          ctx.response = response as FetchClientResponse<T>;
+          ctx.response.data = null;
+          ctx.response.problem = new ProblemDetails();
+        }
 
-      ctx.response.meta = {
-        links: parseLinkHeader(response.headers.get("Link")) || {},
-      };
+        ctx.response.meta = {
+          links: parseLinkHeader(response.headers.get("Link")) || {},
+        };
 
-      if (getOptions?.cacheKey) {
-        this.cache.set(
-          getOptions.cacheKey,
-          ctx.response,
-          getOptions.cacheDuration,
-        );
+        if (getOptions?.cacheKey) {
+          this.cache.set(
+            getOptions.cacheKey,
+            ctx.response,
+            getOptions.cacheDuration,
+          );
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === "TimeoutError") {
+          ctx.response = this.problemToResponse(
+            Object.assign(new ProblemDetails(), {
+              status: 408,
+              title: "Request Timeout",
+            }),
+            ctx.request.url,
+          ) as FetchClientResponse<T>;
+        } else {
+          throw error;
+        }
       }
 
       await next();
     };
+
     const middleware = [
       ...this.options.middleware ?? [],
       ...this.#middleware,
@@ -637,8 +652,8 @@ export class FetchClient {
 
     return {
       url,
-      status: 422,
-      statusText: "Unprocessable Entity",
+      status: problem.status ?? 422,
+      statusText: problem.title ?? "Unprocessable Entity",
       body: null,
       bodyUsed: true,
       ok: false,

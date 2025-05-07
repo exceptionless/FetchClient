@@ -364,13 +364,23 @@ Deno.test("can getJSON with timeout", async () => {
       timeout: 500,
     });
   } catch (error) {
-    assertEquals((error as Error).name, "TimeoutError");
+    assertEquals((error as Response).status, 408);
     gotError = true;
   }
 
   assert(gotError);
-
   gotError = false;
+
+  const response = await client.getJSON(
+    "https://dummyjson.com/products/1?delay=2000",
+    {
+      timeout: 500,
+      expectedStatusCodes: [408],
+    },
+  );
+  assertFalse(gotError);
+  assertEquals(response.status, 408);
+  assertEquals(response.statusText, "Request Timeout");
 
   try {
     controller.abort("TestAbort");
