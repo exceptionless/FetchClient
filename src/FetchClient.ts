@@ -430,6 +430,16 @@ export class FetchClient {
       init = { ...init, signal: options.signal };
     }
 
+    if (options?.timeout) {
+      let signal = AbortSignal.timeout(options.timeout);
+
+      if (init?.signal) {
+        signal = this.mergeAbortSignals(signal, init.signal);
+      }
+
+      init = { ...init, signal: signal };
+    }
+
     const fetchMiddleware = async (
       ctx: FetchClientContext,
       next: () => Promise<void>,
@@ -522,6 +532,29 @@ export class FetchClient {
     return await mw(context, async () => {
       await this.invokeMiddleware(context, middleware.slice(1));
     });
+  }
+
+  private mergeAbortSignals(...signals: AbortSignal[]): AbortSignal {
+    const controller = new AbortController();
+
+    const onAbort = (event: Event) => {
+      const originalSignal = event.target as AbortSignal;
+      try {
+        controller.abort(originalSignal.reason);
+      } catch {
+        // Just in case multiple signals abort nearly simultaneously
+      }
+    };
+
+    for (const signal of signals) {
+      if (signal.aborted) {
+        controller.abort(signal.reason);
+        break;
+      }
+      signal.addEventListener("abort", onAbort);
+    }
+
+    return controller.signal;
   }
 
   private async getJSONResponse<T>(

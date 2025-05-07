@@ -39,6 +39,11 @@ export type RequestOptions = {
   errorCallback?: (error: FetchClientResponse<unknown>) => boolean | void;
 
   /**
+   * Timeout duration for the request in milliseconds. If the request takes longer than this duration, it will be aborted and will throw an error.
+   */
+  timeout?: number;
+
+  /**
    * An AbortSignal object that can be used to cancel the request.
    */
   signal?: AbortSignal;

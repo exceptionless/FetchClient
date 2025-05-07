@@ -1,4 +1,10 @@
-import { assert, assertEquals, assertFalse, assertRejects } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertFalse,
+  assertRejects,
+  assertThrows,
+} from "@std/assert";
 import {
   FetchClient,
   type FetchClientContext,
@@ -350,6 +356,40 @@ Deno.test("can abort getJSON", () => {
       assertEquals(r.statusText, "The user aborted a request.");
     });
   controller.abort();
+});
+
+Deno.test.only("can getJSON with timeout", async () => {
+  const provider = new FetchClientProvider();
+  const controller = new AbortController();
+
+  const client = provider.getFetchClient();
+  let gotError = false;
+
+  try {
+    await client.getJSON("https://dummyjson.com/products/1?delay=2000", {
+      timeout: 500,
+    });
+  } catch (error) {
+    assertEquals((error as Error).name, "TimeoutError");
+    gotError = true;
+  }
+
+  assert(gotError);
+
+  gotError = false;
+
+  try {
+    controller.abort("TestAbort");
+    await client.getJSON("https://dummyjson.com/products/1?delay=2000", {
+      timeout: 500,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    assertEquals(error, "TestAbort");
+    gotError = true;
+  }
+
+  assert(gotError);
 });
 
 Deno.test("can get loading status", async () => {
