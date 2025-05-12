@@ -317,51 +317,54 @@ Deno.test("can deleteJSON with client middleware", async () => {
   assertEquals(r.data!.completed, false);
 });
 
-Deno.test("can abort getJSON", () => {
+Deno.test("can abort getJSON", async () => {
   const provider = new FetchClientProvider();
-  const controller = new AbortController();
-  let responseTimeout: ReturnType<typeof setTimeout>;
-  const fakeFetch = (r: unknown): Promise<Response> =>
-    new Promise((resolve) => {
-      const request = r as Request;
-      request.signal.addEventListener("abort", () => {
-        clearTimeout(responseTimeout);
-        resolve(
-          new Response(null, {
-            status: 299,
-            statusText: "The user aborted a request.",
-          }),
-        );
-      });
-      responseTimeout = setTimeout(function () {
-        resolve(new Response());
-      }, 1000);
-    });
-
-  provider.fetch = fakeFetch;
   const client = provider.getFetchClient();
-  client
-    .getJSON("https://jsonplaceholder.typicode.com/todos/1", {
+  let gotError = false;
+
+  try {
+    const controller = new AbortController();
+    setTimeout(() => {
+      controller.abort("Signal was aborted");
+    }, 100);
+
+    await client.getJSON("https://dummyjson.com/products/1?delay=2000", {
+      timeout: 500,
       signal: controller.signal,
-    })
-    .then((r) => {
-      assert(r.ok);
-      assertEquals(r.status, 299);
-      assertEquals(r.statusText, "The user aborted a request.");
     });
-  controller.abort();
+  } catch (error) {
+    assertEquals(error, "Signal was aborted");
+    gotError = true;
+  }
+
+  assert(gotError);
+
+  // can use expectedStatusCodes to not throw an error
+  const response = await client.getJSON(
+    "https://dummyjson.com/products/1?delay=2000",
+    {
+      timeout: 500,
+      signal: AbortSignal.timeout(100),
+      expectedStatusCodes: [408],
+    },
+  );
+
+  assertEquals(response.status, 408);
+  assertEquals(response.statusText, "Request Timeout");
+  assertEquals(response.problem?.status, 408);
 });
 
 Deno.test("can getJSON with timeout", async () => {
   const provider = new FetchClientProvider();
-  const controller = new AbortController();
 
   const client = provider.getFetchClient();
   let gotError = false;
 
   try {
+    // timeout is set to 100ms, but the request takes 2000ms
+    // so it should throw a timeout error
     await client.getJSON("https://dummyjson.com/products/1?delay=2000", {
-      timeout: 500,
+      timeout: 100,
     });
   } catch (error) {
     assertEquals((error as Response).status, 408);
@@ -371,10 +374,11 @@ Deno.test("can getJSON with timeout", async () => {
   assert(gotError);
   gotError = false;
 
+  // can use expectedStatusCodes to not throw an error
   const response = await client.getJSON(
     "https://dummyjson.com/products/1?delay=2000",
     {
-      timeout: 500,
+      timeout: 100,
       expectedStatusCodes: [408],
     },
   );
@@ -383,13 +387,18 @@ Deno.test("can getJSON with timeout", async () => {
   assertEquals(response.statusText, "Request Timeout");
 
   try {
-    controller.abort("TestAbort");
+    const controller = new AbortController();
+    setTimeout(() => {
+      controller.abort("Signal was aborted");
+    }, 100);
+
+    // both timeout and signal are set
     await client.getJSON("https://dummyjson.com/products/1?delay=2000", {
       timeout: 500,
       signal: controller.signal,
     });
   } catch (error) {
-    assertEquals(error, "TestAbort");
+    assertEquals(error, "Signal was aborted");
     gotError = true;
   }
 
