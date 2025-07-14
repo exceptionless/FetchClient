@@ -14,8 +14,6 @@ await build({
   typeCheck: false,
   test: true,
 
-  importMap: "deno.json",
-
   package: {
     name: "@exceptionless/fetchclient",
     version: Deno.args[0],
