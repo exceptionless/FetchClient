@@ -8,6 +8,7 @@ import {
 import type { FetchClientResponse } from "./FetchClientResponse.ts";
 import type { ProblemDetails } from "./ProblemDetails.ts";
 import type { GetRequestOptions, RequestOptions } from "./RequestOptions.ts";
+import type { RateLimitConfig } from "./RateLimiter.ts";
 
 let getCurrentProviderFunc: () => FetchClientProvider | null = () => null;
 
@@ -163,4 +164,12 @@ export function useMiddleware(middleware: FetchClientMiddleware) {
  */
 export function setRequestOptions(options: RequestOptions) {
   getCurrentProvider().applyOptions({ defaultRequestOptions: options });
+}
+
+/**
+ * Enables rate limiting for the current provider.
+ * @param config - The rate limit configuration.
+ */
+export function enableRateLimit(config: RateLimitConfig) {
+  getCurrentProvider().enableRateLimit(config);
 }

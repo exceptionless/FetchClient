@@ -7,6 +7,7 @@ FetchClient is a library that makes it easier to use the fetch API for JSON APIs
 * [Automatic model validation](#model-validator)
 * [Caching](#caching)
 * [Middleware](#middleware)
+* [Rate limiting](#rate-limiting)
 * [Problem Details](https://www.rfc-editor.org/rfc/rfc9457.html) support
 * Option to parse dates in responses
 
@@ -128,6 +129,32 @@ const client = new FetchClient();
 const response = await client.getJSON<Products>(
   `https://dummyjson.com/products/search?q=iphone&limit=10`,
 );
+```
+
+### Rate Limiting
+
+```ts
+import { FetchClientProvider } from '@exceptionless/fetchclient';
+
+const provider = new FetchClientProvider();
+
+// Enable rate limiting: max 100 requests per hour
+provider.enableRateLimit({
+  maxRequests: 100,
+  windowMs: 60 * 60 * 1000, // 1 hour
+});
+
+const client = provider.getFetchClient();
+
+// Requests exceeding the limit will receive HTTP 429 responses
+const response = await client.getJSON('https://api.example.com/data', {
+  expectedStatusCodes: [200, 429] // Handle 429 without throwing
+});
+
+if (response.status === 429) {
+  const retryAfter = response.headers.get('Retry-After');
+  console.log(`Rate limited. Retry after ${retryAfter} seconds`);
+}
 ```
 
 Also, take a look at the tests:

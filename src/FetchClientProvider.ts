@@ -5,6 +5,11 @@ import type { ProblemDetails } from "./ProblemDetails.ts";
 import { FetchClientCache } from "./FetchClientCache.ts";
 import type { FetchClientOptions } from "./FetchClientOptions.ts";
 import { type IObjectEvent, ObjectEvent } from "./ObjectEvent.ts";
+import {
+  createRateLimitMiddleware,
+  type RateLimitConfig,
+  RateLimiter,
+} from "./RateLimiter.ts";
 
 type Fetch = typeof globalThis.fetch;
 
@@ -17,6 +22,7 @@ export class FetchClientProvider {
   #cache: FetchClientCache;
   #counter = new Counter();
   #onLoading = new ObjectEvent<boolean>();
+  #rateLimiter?: RateLimiter;
 
   /**
    * Creates a new instance of FetchClientProvider.
@@ -186,6 +192,22 @@ export class FetchClientProvider {
         middleware,
       ],
     };
+  }
+
+  /**
+   * Enables rate limiting for all FetchClient instances created by this provider.
+   * @param config - The rate limit configuration.
+   */
+  public enableRateLimit(config: RateLimitConfig) {
+    this.#rateLimiter = new RateLimiter(config);
+    this.useMiddleware(createRateLimitMiddleware(this.#rateLimiter));
+  }
+
+  /**
+   * Gets the current rate limiter instance, if rate limiting is enabled.
+   */
+  public get rateLimiter(): RateLimiter | undefined {
+    return this.#rateLimiter;
   }
 }
 

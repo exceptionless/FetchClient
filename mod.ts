@@ -11,3 +11,4 @@ export {
   FetchClientProvider,
 } from "./src/FetchClientProvider.ts";
 export * from "./src/DefaultHelpers.ts";
+export { type RateLimitConfig, RateLimiter } from "./src/RateLimiter.ts";

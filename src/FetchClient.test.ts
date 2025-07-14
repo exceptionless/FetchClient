@@ -8,14 +8,14 @@ import {
   useFetchClient,
 } from "../mod.ts";
 import { FetchClientProvider } from "./FetchClientProvider.ts";
-import { z, type ZodTypeAny } from "zod";
+import * as z from "zod/mini";
 
 export const TodoSchema = z.object({
   userId: z.number(),
   id: z.number(),
   title: z.string(),
   completed: z.boolean(),
-  completedTime: z.coerce.date().optional(),
+  completedTime: z.optional(z.coerce.date()),
 });
 
 type Todo = z.infer<typeof TodoSchema>;
@@ -614,7 +614,7 @@ Deno.test("can getJSON with zod schema", async () => {
     await next();
 
     if (ctx.options.schema) {
-      const schema = ctx.options.schema as ZodTypeAny;
+      const schema = ctx.options.schema as z.ZodMiniType;
       const parsed = schema.safeParse(ctx.response!.data);
 
       if (parsed.success) {
