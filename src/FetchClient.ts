@@ -12,6 +12,9 @@ import type { FetchClientOptions } from "./FetchClientOptions.ts";
 import { type IObjectEvent, ObjectEvent } from "./ObjectEvent.ts";
 
 type Fetch = typeof globalThis.fetch;
+type RequestInitWithObjectBody = Omit<RequestInit, "body"> & {
+  body?: BodyInit | object | null;
+};
 
 /**
  * Represents a client for making HTTP requests using the Fetch API.
@@ -129,16 +132,11 @@ export class FetchClient {
       ...this.options.defaultRequestOptions,
       ...options,
     };
+
     const response = await this.fetchInternal(
       url,
       options,
-      {
-        method: "GET",
-        headers: {
-          ...{ "Content-Type": "application/json" },
-          ...options?.headers,
-        },
-      },
+      this.buildRequestInit("GET", undefined, options),
     );
 
     return response;
@@ -154,7 +152,9 @@ export class FetchClient {
     url: string,
     options?: GetRequestOptions,
   ): Promise<FetchClientResponse<T>> {
-    return this.get(url, options) as Promise<FetchClientResponse<T>>;
+    return this.get(url, this.buildJsonRequestOptions(options)) as Promise<
+      FetchClientResponse<T>
+    >;
   }
 
   /**
@@ -175,31 +175,10 @@ export class FetchClient {
       ...options,
     };
 
-    if (body instanceof FormData) {
-      const response = await this.fetchInternal(
-        url,
-        options,
-        {
-          method: "POST",
-          headers: { ...options?.headers },
-          body: body,
-        },
-      );
-
-      return response;
-    }
-
-    const problem = await this.validate(body, options);
-    if (problem) return this.problemToResponse(problem, url);
-
     const response = await this.fetchInternal(
       url,
       options,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...options?.headers },
-        body: typeof body === "string" ? body : JSON.stringify(body),
-      },
+      this.buildRequestInit("POST", body, options),
     );
 
     return response;
@@ -219,7 +198,13 @@ export class FetchClient {
     body?: object | string | FormData,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<T>> {
-    return this.post(url, body, options) as Promise<FetchClientResponse<T>>;
+    return this.post(
+      url,
+      body,
+      this.buildJsonRequestOptions(options),
+    ) as Promise<
+      FetchClientResponse<T>
+    >;
   }
 
   /**
@@ -239,31 +224,10 @@ export class FetchClient {
       ...options,
     };
 
-    if (body instanceof FormData) {
-      const response = await this.fetchInternal(
-        url,
-        options,
-        {
-          method: "PUT",
-          headers: { ...options?.headers },
-          body: body,
-        },
-      );
-
-      return response;
-    }
-
-    const problem = await this.validate(body, options);
-    if (problem) return this.problemToResponse(problem, url);
-
     const response = await this.fetchInternal(
       url,
       options,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...options?.headers },
-        body: typeof body === "string" ? body : JSON.stringify(body),
-      },
+      this.buildRequestInit("PUT", body, options),
     );
 
     return response;
@@ -283,7 +247,13 @@ export class FetchClient {
     body?: object | string,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<T>> {
-    return this.put(url, body, options) as Promise<FetchClientResponse<T>>;
+    return this.put(
+      url,
+      body,
+      this.buildJsonRequestOptions(options),
+    ) as Promise<
+      FetchClientResponse<T>
+    >;
   }
 
   /**
@@ -303,31 +273,10 @@ export class FetchClient {
       ...options,
     };
 
-    if (body instanceof FormData) {
-      const response = await this.fetchInternal(
-        url,
-        options,
-        {
-          method: "PATCH",
-          headers: { ...options?.headers },
-          body: body,
-        },
-      );
-
-      return response;
-    }
-
-    const problem = await this.validate(body, options);
-    if (problem) return this.problemToResponse(problem, url);
-
     const response = await this.fetchInternal(
       url,
       options,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...options?.headers },
-        body: typeof body === "string" ? body : JSON.stringify(body),
-      },
+      this.buildRequestInit("PATCH", body, options),
     );
 
     return response;
@@ -347,7 +296,13 @@ export class FetchClient {
     body?: object | string,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<T>> {
-    return this.patch(url, body, options) as Promise<FetchClientResponse<T>>;
+    return this.patch(
+      url,
+      body,
+      this.buildJsonRequestOptions(options),
+    ) as Promise<
+      FetchClientResponse<T>
+    >;
   }
 
   /**
@@ -365,14 +320,14 @@ export class FetchClient {
       ...this.options.defaultRequestOptions,
       ...options,
     };
-    return await this.fetchInternal(
+
+    const response = await this.fetchInternal(
       url,
       options,
-      {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json", ...options?.headers },
-      },
+      this.buildRequestInit("DELETE", undefined, options),
     );
+
+    return response;
   }
 
   /**
@@ -387,7 +342,9 @@ export class FetchClient {
     url: string,
     options?: RequestOptions,
   ): Promise<FetchClientResponse<T>> {
-    return this.delete(url, options) as Promise<FetchClientResponse<T>>;
+    return this.delete(url, this.buildJsonRequestOptions(options)) as Promise<
+      FetchClientResponse<T>
+    >;
   }
 
   private async validate(
@@ -412,9 +369,21 @@ export class FetchClient {
   private async fetchInternal<T>(
     url: string,
     options: RequestOptions,
-    init?: RequestInit,
+    init?: RequestInitWithObjectBody,
   ): Promise<FetchClientResponse<T>> {
     const { builtUrl, absoluteUrl } = this.buildUrl(url, options);
+
+    // if we have a body and it's not FormData, validate it before proceeding
+    if (init?.body && !(init?.body instanceof FormData)) {
+      const problem = await this.validate(init?.body, options);
+      if (problem) {
+        return this.problemToResponse<T>(problem, url);
+      }
+    }
+
+    if (init?.body && typeof init.body === "object") {
+      init.body = JSON.stringify(init.body);
+    }
 
     const accessToken = this.options.accessTokenFunc?.() ?? null;
     if (accessToken !== null) {
@@ -458,9 +427,6 @@ export class FetchClient {
           await (this.fetch ? this.fetch(ctx.request) : fetch(ctx.request));
 
         if (
-          ctx.request.headers.get("Content-Type")?.startsWith(
-            "application/json",
-          ) ||
           ctx.request.headers.get("Accept")?.startsWith("application/json") ||
           response?.headers.get("Content-Type")?.startsWith(
             "application/problem+json",
@@ -513,10 +479,10 @@ export class FetchClient {
     let request: Request | null = null;
 
     try {
-      request = new Request(builtUrl, init);
+      request = new Request(builtUrl, init as RequestInit);
     } catch {
       // try using absolute URL
-      request = new Request(absoluteUrl, init);
+      request = new Request(absoluteUrl, init as RequestInit);
     }
 
     const context: FetchClientContext = {
@@ -577,18 +543,23 @@ export class FetchClient {
     options: RequestOptions,
   ): Promise<FetchClientResponse<T>> {
     let data = null;
+    let bodyText = "";
     try {
+      bodyText = await response.text();
       if (options.reviver || options.shouldParseDates) {
-        const body = await response.text();
-        data = JSON.parse(body, (key, value) => {
+        data = JSON.parse(bodyText, (key, value) => {
           return this.reviveJsonValue(options, key, value);
         });
       } else {
-        data = await response.json();
+        data = JSON.parse(bodyText);
       }
-    } catch {
+    } catch (error: unknown) {
       data = new ProblemDetails();
-      data.setErrorMessage("Unable to deserialize response data");
+      data.detail = bodyText;
+      data.title = `Unable to deserialize response data: ${
+        error instanceof Error ? error.message : String(error)
+      }`;
+      data.setErrorMessage(data.title);
     }
 
     const jsonResponse = response as FetchClientResponse<T>;
@@ -643,10 +614,46 @@ export class FetchClient {
     return value;
   }
 
-  private problemToResponse(
+  private buildRequestInit(
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+    body: object | string | FormData | undefined,
+    options: RequestOptions | undefined,
+  ): RequestInitWithObjectBody {
+    const isDefinitelyJsonBody = body !== undefined &&
+      body !== null &&
+      typeof body === "object";
+
+    const headers: Record<string, string> = {};
+    if (isDefinitelyJsonBody) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    return {
+      method,
+      headers: {
+        ...headers,
+        ...options?.headers,
+      },
+      body,
+    };
+  }
+
+  private buildJsonRequestOptions(
+    options: RequestOptions | undefined,
+  ): RequestOptions {
+    return {
+      headers: {
+        "Accept": "application/json, application/problem+json",
+        ...options?.headers,
+      },
+      ...options,
+    };
+  }
+
+  private problemToResponse<T>(
     problem: ProblemDetails,
     url: string,
-  ): FetchClientResponse<unknown> {
+  ): FetchClientResponse<T> {
     const headers = new Headers();
     headers.set("Content-Type", "application/problem+json");
 
@@ -756,6 +763,11 @@ export class FetchClient {
         return;
       }
     }
+
+    response.problem ??= new ProblemDetails();
+    response.problem.status = response.status;
+    response.problem.title = `Unexpected status code: ${response.status}`;
+    response.problem.setErrorMessage(response.problem.title);
 
     throw response;
   }

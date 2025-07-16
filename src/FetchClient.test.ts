@@ -1,7 +1,14 @@
-import { assert, assertEquals, assertFalse, assertRejects } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertFalse,
+  assertRejects,
+  assertStringIncludes,
+} from "@std/assert";
 import {
   FetchClient,
   type FetchClientContext,
+  type FetchClientResponse,
   getJSON,
   ProblemDetails,
   setBaseUrl,
@@ -898,6 +905,69 @@ Deno.test("can use kitchen sink function", async () => {
   assertEquals(res.data.products.length, 10);
   assert(called);
   assert(optionsCalled);
+});
+
+Deno.test("handles 400 response with non-JSON text", async () => {
+  const provider = new FetchClientProvider();
+  const fakeFetch = (): Promise<Response> =>
+    new Promise((resolve) => {
+      resolve(
+        new Response("Hello World", {
+          status: 400,
+          statusText: "Bad Request",
+        }),
+      );
+    });
+
+  provider.fetch = fakeFetch;
+  const client = provider.getFetchClient();
+
+  // Test that the client throws an error for 400 status by default
+  try {
+    await client.deleteJSON("https://dummyjson.com/http/400/Hello World", {
+      headers: { "Accept": "text/plain" },
+    });
+  } catch (error) {
+    assert(error instanceof Response);
+    const response = error as FetchClientResponse<unknown>;
+    assertEquals(response.status, 400);
+    assertEquals(response.statusText, "Bad Request");
+    assertFalse(response.ok);
+    assertEquals(response.data, null);
+    assert(response.problem);
+    assert(response.problem.errors);
+    assert(response.problem.title);
+    assertStringIncludes(response.problem.title, "Unexpected status");
+    assert(response.problem.errors.general);
+    assertEquals(response.problem.errors.general.length, 1);
+    assertStringIncludes(
+      response.problem.errors.general[0],
+      "Unexpected status",
+    );
+  }
+
+  // Test with expectedStatusCodes to handle 400 without throwing
+  const response = await client.deleteJSON(
+    "https://dummyjson.com/http/400/Hello World",
+    {
+      expectedStatusCodes: [400],
+    },
+  );
+
+  assertEquals(response.status, 400);
+  assertEquals(response.statusText, "Bad Request");
+  assertFalse(response.ok);
+  assertEquals(response.data, null);
+  assert(response.problem);
+  assert(response.problem.errors);
+  assert(response.problem.title);
+  assertStringIncludes(response.problem.title, "Unable to deserialize");
+  assert(response.problem.errors.general);
+  assertEquals(response.problem.errors.general.length, 1);
+  assertStringIncludes(
+    response.problem.errors.general[0],
+    "Unable to deserialize",
+  );
 });
 
 function delay(time: number): Promise<void> {

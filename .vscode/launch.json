@@ -3,9 +3,8 @@
   "configurations": [
     {
       "request": "launch",
-      "name": "Debug Tests",
+      "name": "Debug All Tests",
       "type": "node",
-      "program": "${workspaceFolder}/src/FetchClient.test.ts",
       "cwd": "${workspaceFolder}",
       "env": {},
       "runtimeExecutable": "deno",
@@ -13,6 +12,23 @@
         "test",
         "--inspect-wait",
         "--allow-all"
+      ],
+      "attachSimplePort": 9229
+    },
+    {
+      "request": "launch",
+      "name": "Debug Test",
+      "type": "node",
+      "program": "src/FetchClient.test.ts",
+      "cwd": "${workspaceFolder}",
+      "env": {},
+      "runtimeExecutable": "deno",
+      "runtimeArgs": [
+        "test",
+        "--inspect-wait",
+        "--allow-all",
+        "--filter",
+        "handles 400 response with non-JSON text"
       ],
       "attachSimplePort": 9229
     }
