@@ -40,7 +40,7 @@ const createMockFetch = (response: {
 Deno.test("RateLimiter - basic functionality", () => {
   const rateLimiter = new RateLimiter({
     maxRequests: 2,
-    windowMs: 1000,
+    windowSeconds: 1,
   });
 
   // First request should be allowed
@@ -71,7 +71,7 @@ Deno.test("RateLimiter - basic functionality", () => {
 Deno.test("RateLimiter - group generator", () => {
   const rateLimiter = new RateLimiter({
     maxRequests: 1,
-    windowMs: 1000,
+    windowSeconds: 1,
     getGroupFunc: (url: string) => `${url}`,
   });
 
@@ -82,10 +82,53 @@ Deno.test("RateLimiter - group generator", () => {
   assertEquals(rateLimiter.isAllowed("http://other.com"), false);
 });
 
+Deno.test("RateLimiter - group initialization", () => {
+  const rateLimiter = new RateLimiter({
+    maxRequests: 5,
+    windowSeconds: 1,
+    getGroupFunc: (url: string) => new URL(url).hostname,
+    groups: {
+      "example.com": {
+        maxRequests: 2,
+        windowSeconds: 1,
+      },
+      "api.example.com": {
+        maxRequests: 10,
+        windowSeconds: 2,
+      },
+    },
+  });
+
+  // Check that group options were applied correctly
+  const exampleOptions = rateLimiter.getGroupOptions("example.com");
+  assertEquals(exampleOptions.maxRequests, 2);
+  assertEquals(exampleOptions.windowSeconds, 1);
+
+  const apiOptions = rateLimiter.getGroupOptions("api.example.com");
+  assertEquals(apiOptions.maxRequests, 10);
+  assertEquals(apiOptions.windowSeconds, 2);
+
+  // Check that non-configured groups get empty options (will use defaults)
+  const otherOptions = rateLimiter.getGroupOptions("other.com");
+  assertEquals(otherOptions.maxRequests, undefined);
+  assertEquals(otherOptions.windowSeconds, undefined);
+
+  // Test that the group-specific limits are actually used
+  assertEquals(rateLimiter.isAllowed("https://example.com/test"), true);
+  assertEquals(rateLimiter.isAllowed("https://example.com/test"), true);
+  assertEquals(rateLimiter.isAllowed("https://example.com/test"), false); // Should be denied (limit=2)
+
+  // API subdomain should have different limits
+  assertEquals(
+    rateLimiter.getRemainingRequests("https://api.example.com/test"),
+    10,
+  );
+});
+
 Deno.test("RateLimiter - time window expiry", async () => {
   const rateLimiter = new RateLimiter({
     maxRequests: 1,
-    windowMs: 100, // 100ms window
+    windowSeconds: 0.1,
   });
 
   // First request should be allowed
@@ -107,7 +150,7 @@ Deno.test("RateLimitMiddleware - throws error when rate limit exceeded", async (
 
   const options: RateLimitMiddlewareOptions = {
     maxRequests: 1,
-    windowMs: 1000,
+    windowSeconds: 1,
     throwOnRateLimit: true,
   };
 
@@ -133,7 +176,7 @@ Deno.test("RateLimitMiddleware - returns 429 response when configured", async ()
 
   const options: RateLimitMiddlewareOptions = {
     maxRequests: 1,
-    windowMs: 1000,
+    windowSeconds: 1,
     throwOnRateLimit: false,
     errorMessage: "Custom rate limit message",
   };
@@ -170,7 +213,7 @@ Deno.test("RateLimitMiddleware - provides rate limit info in error response", as
 
   const options: RateLimitMiddlewareOptions = {
     maxRequests: 1,
-    windowMs: 1000,
+    windowSeconds: 1,
     throwOnRateLimit: false,
   };
 
@@ -203,7 +246,7 @@ Deno.test("createRateLimitMiddleware - custom group generator", async () => {
   let callCount = 0;
   const options: RateLimitMiddlewareOptions = {
     maxRequests: 1,
-    windowMs: 1000,
+    windowSeconds: 1,
     getGroupFunc: (url: string) => {
       callCount++;
       return `custom-${url}`;
@@ -235,7 +278,7 @@ Deno.test("RateLimitError - contains correct information", async () => {
 
   provider.useRateLimit({
     maxRequests: 1,
-    windowMs: 1000,
+    windowSeconds: 1,
     throwOnRateLimit: true,
   });
 
@@ -247,6 +290,7 @@ Deno.test("RateLimitError - contains correct information", async () => {
   // Second request should throw with proper error info
   try {
     await client.get("http://example.com");
+    throw new Error("Expected request to fail");
   } catch (error) {
     if (error instanceof RateLimitError) {
       assertEquals(error.name, "RateLimitError");
@@ -262,7 +306,7 @@ Deno.test("RateLimitError - contains correct information", async () => {
 Deno.test("RateLimiter - updateFromHeaders with standard headers", () => {
   const rateLimiter = new RateLimiter({
     maxRequests: 10,
-    windowMs: 5000,
+    windowSeconds: 5,
   });
 
   // Test with IETF standard headers
@@ -275,13 +319,13 @@ Deno.test("RateLimiter - updateFromHeaders with standard headers", () => {
 
   const groupOptions = rateLimiter.getGroupOptions("test-group");
   assertEquals(groupOptions.maxRequests, 100);
-  assertEquals(groupOptions.windowMs, 60000); // 60 seconds in milliseconds
+  assertEquals(groupOptions.windowSeconds, 60);
 });
 
 Deno.test("RateLimiter - updateFromHeaders with x-ratelimit fallback headers", () => {
   const rateLimiter = new RateLimiter({
     maxRequests: 10,
-    windowMs: 5000,
+    windowSeconds: 5,
   });
 
   // Test with fallback x-ratelimit headers
@@ -296,13 +340,13 @@ Deno.test("RateLimiter - updateFromHeaders with x-ratelimit fallback headers", (
 
   const groupOptions = rateLimiter.getGroupOptions("test-group");
   assertEquals(groupOptions.maxRequests, 50);
-  assertEquals(groupOptions.windowMs, 120000); // 120 seconds in milliseconds
+  assertEquals(groupOptions.windowSeconds, 120);
 });
 
 Deno.test("RateLimiter - updateFromHeaders with x-rate-limit fallback headers", () => {
   const rateLimiter = new RateLimiter({
     maxRequests: 10,
-    windowMs: 5000,
+    windowSeconds: 5,
   });
 
   // Test with alternate x-rate-limit headers
@@ -310,20 +354,20 @@ Deno.test("RateLimiter - updateFromHeaders with x-rate-limit fallback headers", 
     "x-rate-limit-limit": "200",
     "x-rate-limit-remaining": "150",
     "x-rate-limit-reset": "1234567890",
-    "x-rate-limit-window": "300",
+    "x-rate-limit-window": "30",
   });
 
   rateLimiter.updateFromHeaders("test-group", headers);
 
   const groupOptions = rateLimiter.getGroupOptions("test-group");
   assertEquals(groupOptions.maxRequests, 200);
-  assertEquals(groupOptions.windowMs, 300000); // 300 seconds in milliseconds
+  assertEquals(groupOptions.windowSeconds, 30);
 });
 
 Deno.test("RateLimiter - updateFromHeaders prioritizes standard over x-ratelimit", () => {
   const rateLimiter = new RateLimiter({
     maxRequests: 10,
-    windowMs: 5000,
+    windowSeconds: 5,
   });
 
   // Test with both IETF and x-ratelimit headers - IETF should take precedence
@@ -341,13 +385,13 @@ Deno.test("RateLimiter - updateFromHeaders prioritizes standard over x-ratelimit
   const groupOptions = rateLimiter.getGroupOptions("test-group");
   // Should use IETF standard values (100 limit, 60 window), not x-ratelimit values
   assertEquals(groupOptions.maxRequests, 100);
-  assertEquals(groupOptions.windowMs, 60000); // 60 seconds in milliseconds
+  assertEquals(groupOptions.windowSeconds, 60);
 });
 
 Deno.test("RateLimiter - updateFromHeaders with reset time calculation", () => {
   const rateLimiter = new RateLimiter({
     maxRequests: 10,
-    windowMs: 5000,
+    windowSeconds: 5,
   });
 
   // Test with only reset time (no window)
@@ -361,15 +405,15 @@ Deno.test("RateLimiter - updateFromHeaders with reset time calculation", () => {
 
   const groupOptions = rateLimiter.getGroupOptions("test-group");
   assertEquals(groupOptions.maxRequests, 50);
-  // Window should be approximately 90 seconds (90000ms)
-  assertEquals(groupOptions.windowMs! >= 85000, true);
-  assertEquals(groupOptions.windowMs! <= 95000, true);
+  // Window should be approximately 90 seconds
+  assertEquals(groupOptions.windowSeconds! >= 85, true);
+  assertEquals(groupOptions.windowSeconds! <= 95, true);
 });
 
 Deno.test("RateLimiter - updateFromHeaders with malformed IETF headers", () => {
   const rateLimiter = new RateLimiter({
     maxRequests: 10,
-    windowMs: 5000,
+    windowSeconds: 5,
   });
 
   // Test with malformed IETF headers should fall back to x-ratelimit
@@ -384,16 +428,14 @@ Deno.test("RateLimiter - updateFromHeaders with malformed IETF headers", () => {
 
   const groupOptions = rateLimiter.getGroupOptions("test-group");
   assertEquals(groupOptions.maxRequests, 50);
-  assertEquals(groupOptions.windowMs, 120000);
+  assertEquals(groupOptions.windowSeconds, 120);
 });
 
 Deno.test("createRateLimitHeader - creates correct header format", () => {
   const result = buildRateLimitHeader({
     policy: "default",
-    limit: 100,
     remaining: 75,
     resetSeconds: 30,
-    windowSeconds: 60,
   });
 
   assertEquals(result, '"default";r=75;t=30');
@@ -402,10 +444,8 @@ Deno.test("createRateLimitHeader - creates correct header format", () => {
 Deno.test("createRateLimitHeader - handles missing reset time", () => {
   const result = buildRateLimitHeader({
     policy: "default",
-    limit: 100,
     remaining: 75,
     resetSeconds: 0,
-    windowSeconds: 60,
   });
 
   assertEquals(result, '"default";r=75');
@@ -415,8 +455,6 @@ Deno.test("createRateLimitPolicyHeader - creates correct header format", () => {
   const result = buildRateLimitPolicyHeader({
     policy: "default",
     limit: 100,
-    remaining: 75,
-    resetSeconds: 30,
     windowSeconds: 60,
   });
 
@@ -427,8 +465,6 @@ Deno.test("createRateLimitPolicyHeader - handles missing window", () => {
   const result = buildRateLimitPolicyHeader({
     policy: "default",
     limit: 100,
-    remaining: 75,
-    resetSeconds: 30,
   });
 
   assertEquals(result, '"default";q=100');

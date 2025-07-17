@@ -16,6 +16,7 @@ import {
 } from "../mod.ts";
 import { FetchClientProvider } from "./FetchClientProvider.ts";
 import { z, type ZodTypeAny } from "zod";
+import { buildRateLimitHeader } from "./RateLimiter.ts";
 
 export const TodoSchema = z.object({
   userId: z.number(),
@@ -968,6 +969,123 @@ Deno.test("handles 400 response with non-JSON text", async () => {
     response.problem.errors.general[0],
     "Unable to deserialize",
   );
+});
+
+Deno.test("can use per-domain rate limiting with auto-update from headers", async () => {
+  const provider = new FetchClientProvider();
+
+  const groupTracker = new Map<string, number>();
+
+  const startTime = Date.now();
+
+  groupTracker.set("api.example.com", 100);
+  groupTracker.set("slow-api.example.com", 5);
+
+  provider.usePerDomainRateLimit({
+    maxRequests: 50, // Default limit
+    windowSeconds: 60, // 1 minute default window
+    autoUpdateFromHeaders: true,
+    groups: {
+      "api.example.com": {
+        maxRequests: 100,
+        windowSeconds: 60,
+      },
+      "slow-api.example.com": {
+        maxRequests: 5,
+        windowSeconds: 30,
+      },
+    },
+  });
+
+  provider.fetch = (
+    input: RequestInfo | URL,
+    _init?: RequestInit,
+  ): Promise<Response> => {
+    let url: URL;
+    if (input instanceof Request) {
+      url = new URL(input.url);
+    } else {
+      url = new URL(input.toString());
+    }
+
+    const headers = new Headers({
+      "Content-Type": "application/json",
+    });
+
+    // Simulate different rate limits for different domains
+    if (url.hostname === "api.example.com") {
+      headers.set("X-RateLimit-Limit", "100");
+      let remaining = groupTracker.get("api.example.com") ?? 0;
+      remaining = remaining > 0 ? remaining - 1 : 0;
+      groupTracker.set("api.example.com", remaining);
+      headers.set("X-RateLimit-Remaining", String(remaining));
+    } else if (url.hostname === "slow-api.example.com") {
+      let remaining = groupTracker.get("slow-api.example.com") ?? 0;
+      remaining = remaining > 0 ? remaining - 1 : 0;
+      groupTracker.set("slow-api.example.com", remaining);
+
+      headers.set(
+        "RateLimit-Policy",
+        buildRateLimitHeader({
+          policy: "slow-api.example.com",
+          remaining: remaining,
+          resetSeconds: 30 - ((Date.now() - startTime) / 1000),
+        }),
+      );
+      headers.set(
+        "RateLimit",
+        buildRateLimitHeader({
+          policy: "slow-api.example.com",
+          remaining: remaining,
+          resetSeconds: 30 - ((Date.now() - startTime) / 1000),
+        }),
+      );
+    }
+    // other-api.example.com gets no rate limit headers
+
+    return Promise.resolve(
+      new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        statusText: "OK",
+        headers,
+      }),
+    );
+  };
+
+  const client = provider.getFetchClient();
+
+  const response1 = await client.getJSON(
+    "https://api.example.com/data",
+  );
+  assertEquals(response1.status, 200);
+
+  const response2 = await client.getJSON(
+    "https://slow-api.example.com/data",
+  );
+  assertEquals(response2.status, 200);
+
+  const response3 = await client.getJSON(
+    "https://other-api.example.com/data",
+  );
+  assertEquals(response3.status, 200);
+
+  assert(provider.rateLimiter);
+
+  const apiOptions = provider.rateLimiter.getGroupOptions("api.example.com");
+  assertEquals(apiOptions.maxRequests, 100);
+  assertEquals(apiOptions.windowSeconds, 60);
+
+  const slowApiOptions = provider.rateLimiter.getGroupOptions(
+    "slow-api.example.com",
+  );
+  assertEquals(slowApiOptions.maxRequests, 5);
+  assertEquals(slowApiOptions.windowSeconds, 30);
+
+  const otherOptions = provider.rateLimiter.getGroupOptions(
+    "other-api.example.com",
+  );
+  assertEquals(otherOptions.maxRequests, undefined);
+  assertEquals(otherOptions.windowSeconds, undefined);
 });
 
 function delay(time: number): Promise<void> {

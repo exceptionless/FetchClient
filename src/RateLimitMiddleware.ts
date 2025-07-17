@@ -105,25 +105,21 @@ export class RateLimitMiddleware {
         const groupOptions = this.#rateLimiter.getGroupOptions(group);
         const maxRequests = groupOptions?.maxRequests ??
           this.#rateLimiter["options"].maxRequests;
-        const windowMs = groupOptions?.windowMs ??
-          this.#rateLimiter["options"].windowMs;
+        const windowSeconds = groupOptions?.windowSeconds ??
+          this.#rateLimiter["options"].windowSeconds;
 
         // Create IETF standard rate limit headers
         const resetSeconds = Math.ceil((resetTime - Date.now()) / 1000);
         const rateLimitHeader = buildRateLimitHeader({
           policy: group,
-          limit: maxRequests,
           remaining: remainingRequests,
           resetSeconds: resetSeconds,
-          windowSeconds: Math.floor(windowMs / 1000),
         });
 
         const rateLimitPolicyHeader = buildRateLimitPolicyHeader({
           policy: group,
           limit: maxRequests,
-          remaining: remainingRequests,
-          resetSeconds: resetSeconds,
-          windowSeconds: Math.floor(windowMs / 1000),
+          windowSeconds: Math.floor(windowSeconds),
         });
 
         const headers = new Headers({

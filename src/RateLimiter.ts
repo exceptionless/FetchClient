@@ -10,7 +10,7 @@ export interface GroupRateLimiterOptions {
   /**
    * Time window in milliseconds for this group.
    */
-  windowMs?: number;
+  windowSeconds?: number;
 
   /**
    * Callback function called when rate limit is exceeded for this group.
@@ -29,9 +29,9 @@ export interface RateLimiterOptions {
   maxRequests: number;
 
   /**
-   * Time window in milliseconds.
+   * Time window in seconds.
    */
-  windowMs: number;
+  windowSeconds: number;
 
   /**
    * Optional group generator function to create unique rate limit buckets.
@@ -46,6 +46,12 @@ export interface RateLimiterOptions {
    * @param resetTime - Time when the rate limit will reset (in milliseconds since epoch)
    */
   onRateLimitExceeded?: (resetTime: number) => void;
+
+  /**
+   * Optional group-specific rate limit options.
+   * Map of group keys to their specific rate limit options.
+   */
+  groups?: Record<string, GroupRateLimiterOptions>;
 }
 
 /**
@@ -68,8 +74,16 @@ export class RateLimiter {
     this.options = {
       getGroupFunc: () => "global",
       onRateLimitExceeded: () => {},
+      groups: {},
       ...options,
     };
+
+    // Initialize group options if provided
+    if (options.groups) {
+      for (const [groupKey, groupOptions] of Object.entries(options.groups)) {
+        this.groupOptions.set(groupKey, groupOptions);
+      }
+    }
   }
 
   /**
@@ -84,7 +98,8 @@ export class RateLimiter {
 
     // Use group-specific options if available, otherwise fall back to global options
     const maxRequests = groupOptions.maxRequests ?? this.options.maxRequests;
-    const windowMs = groupOptions.windowMs ?? this.options.windowMs;
+    const windowSeconds = groupOptions.windowSeconds ??
+      this.options.windowSeconds;
     const onRateLimitExceeded = groupOptions.onRateLimitExceeded ??
       this.options.onRateLimitExceeded;
 
@@ -92,18 +107,18 @@ export class RateLimiter {
     if (!bucket) {
       bucket = {
         requests: [],
-        resetTime: now + windowMs,
+        resetTime: now + (windowSeconds * 1000),
       };
       this.buckets.set(key, bucket);
     }
 
     // Clean up old requests outside the time window
-    const windowStart = now - windowMs;
+    const windowStart = now - (windowSeconds * 1000);
     bucket.requests = bucket.requests.filter((time) => time > windowStart);
 
     // Update reset time if all requests have expired
     if (bucket.requests.length === 0) {
-      bucket.resetTime = now + windowMs;
+      bucket.resetTime = now + (windowSeconds * 1000);
     }
 
     // Check if we're within the rate limit
@@ -132,8 +147,9 @@ export class RateLimiter {
     }
 
     const now = Date.now();
-    const windowMs = groupOptions.windowMs ?? this.options.windowMs;
-    const windowStart = now - windowMs;
+    const windowSeconds = groupOptions.windowSeconds ??
+      this.options.windowSeconds;
+    const windowStart = now - (windowSeconds * 1000);
     return bucket.requests.filter((time) => time > windowStart).length;
   }
 
@@ -289,17 +305,17 @@ export class RateLimiter {
     }
 
     if (window) {
-      const windowMs = parseInt(window, 10) * 1000; // Convert seconds to milliseconds
-      if (!isNaN(windowMs)) {
-        newOptions.windowMs = windowMs;
+      const windowSeconds = parseInt(window, 10);
+      if (!isNaN(windowSeconds)) {
+        newOptions.windowSeconds = windowSeconds;
       }
     } else if (reset) {
       // If no window header, try to calculate from reset time
       const resetTime = parseInt(reset, 10);
       if (!isNaN(resetTime)) {
         const now = Math.floor(Date.now() / 1000);
-        const windowMs = Math.max(1000, (resetTime - now) * 1000);
-        newOptions.windowMs = windowMs;
+        const windowSeconds = Math.max(1, resetTime - now);
+        newOptions.windowSeconds = windowSeconds;
       }
     }
 
@@ -352,7 +368,9 @@ export interface RateLimitInfo {
  * @param info - The rate limit information
  * @returns The formatted RateLimit header value
  */
-export function buildRateLimitHeader(info: RateLimitInfo): string {
+export function buildRateLimitHeader(
+  info: Omit<RateLimitInfo, "limit" | "windowSeconds">,
+): string {
   let headerValue = `"${info.policy}";r=${info.remaining}`;
 
   if (info.resetSeconds > 0) {
@@ -367,7 +385,9 @@ export function buildRateLimitHeader(info: RateLimitInfo): string {
  * @param info - The rate limit information
  * @returns The formatted RateLimit-Policy header value
  */
-export function buildRateLimitPolicyHeader(info: RateLimitInfo): string {
+export function buildRateLimitPolicyHeader(
+  info: Omit<RateLimitInfo, "remaining" | "resetSeconds">,
+): string {
   let headerValue = `"${info.policy}";q=${info.limit}`;
 
   if (info.windowSeconds && info.windowSeconds > 0) {

@@ -3,12 +3,18 @@
 
 FetchClient is a library that makes it easier to use the fetch API for JSON APIs. It provides the following features:
 
-* [Makes fetch easier to use for JSON APIs](#typed-response)
-* [Automatic model validation](#model-validator)
-* [Caching](#caching)
-* [Middleware](#middleware)
-* [Problem Details](https://www.rfc-editor.org/rfc/rfc9457.html) support
-* Option to parse dates in responses
+- [FetchClient   ](#fetchclient---)
+  - [Install](#install)
+  - [Docs](#docs)
+  - [Usage](#usage)
+    - [Typed Response](#typed-response)
+    - [Typed Response Using a Function](#typed-response-using-a-function)
+    - [Model Validator](#model-validator)
+    - [Caching](#caching)
+    - [Middleware](#middleware)
+    - [Rate Limiting](#rate-limiting)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ## Install
 
@@ -127,6 +133,23 @@ useMiddleware(async (ctx, next) => {
 const client = new FetchClient();
 const response = await client.getJSON<Products>(
   `https://dummyjson.com/products/search?q=iphone&limit=10`,
+);
+```
+
+### Rate Limiting
+
+```ts
+import { FetchClient, useRateLimit } from '@exceptionless/fetchclient';
+
+// Enable rate limiting globally with 100 requests per minute
+useRateLimit({
+  maxRequests: 100,
+  windowSeconds: 60,
+});
+
+const client = new FetchClient();
+const response = await client.getJSON(
+  `https://api.example.com/data`,
 );
 ```
 
