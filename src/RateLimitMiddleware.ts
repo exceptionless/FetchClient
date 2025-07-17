@@ -2,7 +2,12 @@ import type { FetchClientContext } from "./FetchClientContext.ts";
 import type { FetchClientMiddleware } from "./FetchClientMiddleware.ts";
 import type { FetchClientResponse } from "./FetchClientResponse.ts";
 import { ProblemDetails } from "./ProblemDetails.ts";
-import { RateLimiter, type RateLimiterOptions } from "./RateLimiter.ts";
+import {
+  buildRateLimitHeader,
+  buildRateLimitPolicyHeader,
+  RateLimiter,
+  type RateLimiterOptions,
+} from "./RateLimiter.ts";
 
 /**
  * Rate limiting error thrown when requests exceed the rate limit.
@@ -39,52 +44,106 @@ export interface RateLimitMiddlewareOptions extends RateLimiterOptions {
    * Custom error message when rate limit is exceeded.
    */
   errorMessage?: string;
+
+  /**
+   * Whether to automatically update rate limits based on response headers.
+   * @default true
+   */
+  autoUpdateFromHeaders?: boolean;
 }
 
 /**
- * Creates a rate limiting middleware for FetchClient.
- * @param options - Rate limiting configuration options
- * @returns A FetchClient middleware function
+ * Rate limiting middleware instance that can be shared across requests.
  */
-export function createRateLimitMiddleware(
-  options: RateLimitMiddlewareOptions,
-): FetchClientMiddleware {
-  const rateLimiter = new RateLimiter(options);
-  const throwOnRateLimit = options.throwOnRateLimit ?? true;
+export class RateLimitMiddleware {
+  #rateLimiter: RateLimiter;
 
-  return async (context: FetchClientContext, next: () => Promise<void>) => {
-    const url = context.request.url;
-    const method = context.request.method || "GET";
+  private readonly throwOnRateLimit: boolean;
+  private readonly errorMessage?: string;
+  private readonly autoUpdateFromHeaders: boolean;
 
-    // Check if request is allowed
-    if (!rateLimiter.isAllowed(url, method)) {
-      const resetTime = rateLimiter.getResetTime(url, method) ?? Date.now();
-      const remainingRequests = rateLimiter.getRemainingRequests(url, method);
+  constructor(options: RateLimitMiddlewareOptions) {
+    this.#rateLimiter = new RateLimiter(options);
+    this.throwOnRateLimit = options.throwOnRateLimit ?? true;
+    this.errorMessage = options.errorMessage;
+    this.autoUpdateFromHeaders = options.autoUpdateFromHeaders ?? true;
+  }
 
-      if (throwOnRateLimit) {
-        throw new RateLimitError(
-          resetTime,
-          remainingRequests,
-          options.errorMessage,
+  /**
+   * Gets the underlying rate limiter instance.
+   */
+  public get rateLimiter(): RateLimiter {
+    return this.#rateLimiter;
+  }
+
+  /**
+   * Creates the middleware function.
+   * @returns The middleware function
+   */
+  public middleware(): FetchClientMiddleware {
+    return async (context: FetchClientContext, next: () => Promise<void>) => {
+      const url = context.request.url;
+
+      // Check if request is allowed
+      if (!this.#rateLimiter.isAllowed(url)) {
+        const group = this.#rateLimiter.getGroup(url);
+        const bucket = this.#rateLimiter["buckets"].get(group);
+        const resetTime = bucket?.resetTime ?? Date.now();
+        const remainingRequests = this.#rateLimiter.getRemainingRequests(
+          url,
         );
-      } else {
+
+        if (this.throwOnRateLimit) {
+          throw new RateLimitError(
+            resetTime,
+            remainingRequests,
+            this.errorMessage,
+          );
+        }
+
         // Create a 429 Too Many Requests response
+        const groupOptions = this.#rateLimiter.getGroupOptions(group);
+        const maxRequests = groupOptions?.maxRequests ??
+          this.#rateLimiter["options"].maxRequests;
+        const windowMs = groupOptions?.windowMs ??
+          this.#rateLimiter["options"].windowMs;
+
+        // Create IETF standard rate limit headers
+        const resetSeconds = Math.ceil((resetTime - Date.now()) / 1000);
+        const rateLimitHeader = buildRateLimitHeader({
+          policy: group,
+          limit: maxRequests,
+          remaining: remainingRequests,
+          resetSeconds: resetSeconds,
+          windowSeconds: Math.floor(windowMs / 1000),
+        });
+
+        const rateLimitPolicyHeader = buildRateLimitPolicyHeader({
+          policy: group,
+          limit: maxRequests,
+          remaining: remainingRequests,
+          resetSeconds: resetSeconds,
+          windowSeconds: Math.floor(windowMs / 1000),
+        });
+
         const headers = new Headers({
           "Content-Type": "application/problem+json",
-          "X-RateLimit-Limit": options.maxRequests.toString(),
-          "X-RateLimit-Remaining": remainingRequests.toString(),
-          "X-RateLimit-Reset": Math.ceil(resetTime / 1000).toString(),
-          "Retry-After": Math.ceil((resetTime - Date.now()) / 1000).toString(),
+          "RateLimit": rateLimitHeader,
+          "RateLimit-Policy": rateLimitPolicyHeader,
+          // Legacy headers for backward compatibility
+          "RateLimit-Limit": maxRequests.toString(),
+          "RateLimit-Remaining": remainingRequests.toString(),
+          "RateLimit-Reset": Math.ceil(resetTime / 1000).toString(),
+          "Retry-After": resetSeconds.toString(),
         });
 
         const problem = new ProblemDetails();
         problem.status = 429;
         problem.title = "Too Many Requests";
-        problem.detail = options.errorMessage ||
+        problem.detail = this.errorMessage ||
           `Rate limit exceeded. Try again after ${
             new Date(resetTime).toISOString()
           }`;
-        problem.type = "about:blank";
 
         context.response = {
           url: context.request.url,
@@ -110,15 +169,18 @@ export function createRateLimitMiddleware(
             throw new Error("Not implemented");
           },
         } as FetchClientResponse<unknown>;
+
         return;
       }
-    }
 
-    // Continue with the request
-    await next();
+      await next();
 
-    // Note: We cannot modify response headers after the response is created
-    // as Response headers are read-only. Rate limit information is only
-    // provided in error responses (429) where we control the entire response.
-  };
+      if (this.autoUpdateFromHeaders && context.response) {
+        this.rateLimiter.updateFromHeadersForRequest(
+          url,
+          context.response.headers,
+        );
+      }
+    };
+  }
 }

@@ -5,7 +5,13 @@ import {
   type RateLimitMiddlewareOptions,
 } from "./RateLimitMiddleware.ts";
 import type { FetchClientResponse } from "./FetchClientResponse.ts";
-import { RateLimiter } from "./RateLimiter.ts";
+import {
+  buildRateLimitHeader,
+  buildRateLimitPolicyHeader,
+  parseRateLimitHeader,
+  parseRateLimitPolicyHeader,
+  RateLimiter,
+} from "./RateLimiter.ts";
 
 // Mock fetch function for testing
 const createMockFetch = (response: {
@@ -38,42 +44,42 @@ Deno.test("RateLimiter - basic functionality", () => {
   });
 
   // First request should be allowed
-  assertEquals(rateLimiter.isAllowed("http://example.com", "GET"), true);
-  assertEquals(rateLimiter.getRequestCount("http://example.com", "GET"), 1);
+  assertEquals(rateLimiter.isAllowed("http://example.com"), true);
+  assertEquals(rateLimiter.getRequestCount("http://example.com"), 1);
   assertEquals(
-    rateLimiter.getRemainingRequests("http://example.com", "GET"),
+    rateLimiter.getRemainingRequests("http://example.com"),
     1,
   );
 
   // Second request should be allowed
-  assertEquals(rateLimiter.isAllowed("http://example.com", "GET"), true);
-  assertEquals(rateLimiter.getRequestCount("http://example.com", "GET"), 2);
+  assertEquals(rateLimiter.isAllowed("http://example.com"), true);
+  assertEquals(rateLimiter.getRequestCount("http://example.com"), 2);
   assertEquals(
-    rateLimiter.getRemainingRequests("http://example.com", "GET"),
+    rateLimiter.getRemainingRequests("http://example.com"),
     0,
   );
 
   // Third request should be denied
-  assertEquals(rateLimiter.isAllowed("http://example.com", "GET"), false);
-  assertEquals(rateLimiter.getRequestCount("http://example.com", "GET"), 2);
+  assertEquals(rateLimiter.isAllowed("http://example.com"), false);
+  assertEquals(rateLimiter.getRequestCount("http://example.com"), 2);
   assertEquals(
-    rateLimiter.getRemainingRequests("http://example.com", "GET"),
+    rateLimiter.getRemainingRequests("http://example.com"),
     0,
   );
 });
 
-Deno.test("RateLimiter - key generator", () => {
+Deno.test("RateLimiter - group generator", () => {
   const rateLimiter = new RateLimiter({
     maxRequests: 1,
     windowMs: 1000,
-    keyGenerator: (url, method) => `${method}:${url}`,
+    getGroupFunc: (url: string) => `${url}`,
   });
 
-  // Different methods should have separate buckets
-  assertEquals(rateLimiter.isAllowed("http://example.com", "GET"), true);
-  assertEquals(rateLimiter.isAllowed("http://example.com", "POST"), true);
-  assertEquals(rateLimiter.isAllowed("http://example.com", "GET"), false);
-  assertEquals(rateLimiter.isAllowed("http://example.com", "POST"), false);
+  // Different URLs should have separate buckets
+  assertEquals(rateLimiter.isAllowed("http://example.com"), true);
+  assertEquals(rateLimiter.isAllowed("http://other.com"), true);
+  assertEquals(rateLimiter.isAllowed("http://example.com"), false);
+  assertEquals(rateLimiter.isAllowed("http://other.com"), false);
 });
 
 Deno.test("RateLimiter - time window expiry", async () => {
@@ -83,16 +89,16 @@ Deno.test("RateLimiter - time window expiry", async () => {
   });
 
   // First request should be allowed
-  assertEquals(rateLimiter.isAllowed("http://example.com", "GET"), true);
+  assertEquals(rateLimiter.isAllowed("http://example.com"), true);
 
   // Second request should be denied
-  assertEquals(rateLimiter.isAllowed("http://example.com", "GET"), false);
+  assertEquals(rateLimiter.isAllowed("http://example.com"), false);
 
   // Wait for window to expire
   await new Promise((resolve) => setTimeout(resolve, 150));
 
   // Request should be allowed again
-  assertEquals(rateLimiter.isAllowed("http://example.com", "GET"), true);
+  assertEquals(rateLimiter.isAllowed("http://example.com"), true);
 });
 
 Deno.test("RateLimitMiddleware - throws error when rate limit exceeded", async () => {
@@ -183,14 +189,14 @@ Deno.test("RateLimitMiddleware - provides rate limit info in error response", as
   } catch (error) {
     const response = error as FetchClientResponse<unknown>;
     assertEquals(response.status, 429);
-    assertEquals(response.headers.get("X-RateLimit-Limit"), "1");
-    assertEquals(response.headers.get("X-RateLimit-Remaining"), "0");
-    assertEquals(response.headers.get("X-RateLimit-Reset") !== null, true);
+    assertEquals(response.headers.get("RateLimit-Limit"), "1");
+    assertEquals(response.headers.get("RateLimit-Remaining"), "0");
+    assertEquals(response.headers.get("RateLimit-Reset") !== null, true);
     assertEquals(response.headers.get("Retry-After") !== null, true);
   }
 });
 
-Deno.test("createRateLimitMiddleware - custom key generator", async () => {
+Deno.test("createRateLimitMiddleware - custom group generator", async () => {
   const mockFetch = createMockFetch();
   const provider = new FetchClientProvider(mockFetch);
 
@@ -198,11 +204,12 @@ Deno.test("createRateLimitMiddleware - custom key generator", async () => {
   const options: RateLimitMiddlewareOptions = {
     maxRequests: 1,
     windowMs: 1000,
-    keyGenerator: (url, method) => {
+    getGroupFunc: (url: string) => {
       callCount++;
-      return `custom-${method}-${url}`;
+      return `custom-${url}`;
     },
     throwOnRateLimit: true,
+    autoUpdateFromHeaders: false, // Disable auto-update to prevent extra getGroupFunc calls
   };
 
   provider.useRateLimit(options);
@@ -250,4 +257,229 @@ Deno.test("RateLimitError - contains correct information", async () => {
       throw new Error("Expected RateLimitError");
     }
   }
+});
+
+Deno.test("RateLimiter - updateFromHeaders with standard headers", () => {
+  const rateLimiter = new RateLimiter({
+    maxRequests: 10,
+    windowMs: 5000,
+  });
+
+  // Test with IETF standard headers
+  const headers = new Headers({
+    "ratelimit-policy": '"default";q=100;w=60',
+    "ratelimit": '"default";r=75;t=30',
+  });
+
+  rateLimiter.updateFromHeaders("test-group", headers);
+
+  const groupOptions = rateLimiter.getGroupOptions("test-group");
+  assertEquals(groupOptions.maxRequests, 100);
+  assertEquals(groupOptions.windowMs, 60000); // 60 seconds in milliseconds
+});
+
+Deno.test("RateLimiter - updateFromHeaders with x-ratelimit fallback headers", () => {
+  const rateLimiter = new RateLimiter({
+    maxRequests: 10,
+    windowMs: 5000,
+  });
+
+  // Test with fallback x-ratelimit headers
+  const headers = new Headers({
+    "x-ratelimit-limit": "50",
+    "x-ratelimit-remaining": "25",
+    "x-ratelimit-reset": "1234567890",
+    "x-ratelimit-window": "120",
+  });
+
+  rateLimiter.updateFromHeaders("test-group", headers);
+
+  const groupOptions = rateLimiter.getGroupOptions("test-group");
+  assertEquals(groupOptions.maxRequests, 50);
+  assertEquals(groupOptions.windowMs, 120000); // 120 seconds in milliseconds
+});
+
+Deno.test("RateLimiter - updateFromHeaders with x-rate-limit fallback headers", () => {
+  const rateLimiter = new RateLimiter({
+    maxRequests: 10,
+    windowMs: 5000,
+  });
+
+  // Test with alternate x-rate-limit headers
+  const headers = new Headers({
+    "x-rate-limit-limit": "200",
+    "x-rate-limit-remaining": "150",
+    "x-rate-limit-reset": "1234567890",
+    "x-rate-limit-window": "300",
+  });
+
+  rateLimiter.updateFromHeaders("test-group", headers);
+
+  const groupOptions = rateLimiter.getGroupOptions("test-group");
+  assertEquals(groupOptions.maxRequests, 200);
+  assertEquals(groupOptions.windowMs, 300000); // 300 seconds in milliseconds
+});
+
+Deno.test("RateLimiter - updateFromHeaders prioritizes standard over x-ratelimit", () => {
+  const rateLimiter = new RateLimiter({
+    maxRequests: 10,
+    windowMs: 5000,
+  });
+
+  // Test with both IETF and x-ratelimit headers - IETF should take precedence
+  const headers = new Headers({
+    "ratelimit-policy": '"default";q=100;w=60',
+    "ratelimit": '"default";r=75;t=30',
+    "x-ratelimit-limit": "50",
+    "x-ratelimit-remaining": "25",
+    "x-ratelimit-reset": "1234567890",
+    "x-ratelimit-window": "120",
+  });
+
+  rateLimiter.updateFromHeaders("test-group", headers);
+
+  const groupOptions = rateLimiter.getGroupOptions("test-group");
+  // Should use IETF standard values (100 limit, 60 window), not x-ratelimit values
+  assertEquals(groupOptions.maxRequests, 100);
+  assertEquals(groupOptions.windowMs, 60000); // 60 seconds in milliseconds
+});
+
+Deno.test("RateLimiter - updateFromHeaders with reset time calculation", () => {
+  const rateLimiter = new RateLimiter({
+    maxRequests: 10,
+    windowMs: 5000,
+  });
+
+  // Test with only reset time (no window)
+  const futureTime = Math.floor(Date.now() / 1000) + 90; // 90 seconds in the future
+  const headers = new Headers({
+    "x-ratelimit-limit": "50",
+    "x-ratelimit-reset": futureTime.toString(),
+  });
+
+  rateLimiter.updateFromHeaders("test-group", headers);
+
+  const groupOptions = rateLimiter.getGroupOptions("test-group");
+  assertEquals(groupOptions.maxRequests, 50);
+  // Window should be approximately 90 seconds (90000ms)
+  assertEquals(groupOptions.windowMs! >= 85000, true);
+  assertEquals(groupOptions.windowMs! <= 95000, true);
+});
+
+Deno.test("RateLimiter - updateFromHeaders with malformed IETF headers", () => {
+  const rateLimiter = new RateLimiter({
+    maxRequests: 10,
+    windowMs: 5000,
+  });
+
+  // Test with malformed IETF headers should fall back to x-ratelimit
+  const headers = new Headers({
+    "ratelimit-policy": '"default";invalid=format',
+    "ratelimit": '"default";bad=format',
+    "x-ratelimit-limit": "50",
+    "x-ratelimit-window": "120",
+  });
+
+  rateLimiter.updateFromHeaders("test-group", headers);
+
+  const groupOptions = rateLimiter.getGroupOptions("test-group");
+  assertEquals(groupOptions.maxRequests, 50);
+  assertEquals(groupOptions.windowMs, 120000);
+});
+
+Deno.test("createRateLimitHeader - creates correct header format", () => {
+  const result = buildRateLimitHeader({
+    policy: "default",
+    limit: 100,
+    remaining: 75,
+    resetSeconds: 30,
+    windowSeconds: 60,
+  });
+
+  assertEquals(result, '"default";r=75;t=30');
+});
+
+Deno.test("createRateLimitHeader - handles missing reset time", () => {
+  const result = buildRateLimitHeader({
+    policy: "default",
+    limit: 100,
+    remaining: 75,
+    resetSeconds: 0,
+    windowSeconds: 60,
+  });
+
+  assertEquals(result, '"default";r=75');
+});
+
+Deno.test("createRateLimitPolicyHeader - creates correct header format", () => {
+  const result = buildRateLimitPolicyHeader({
+    policy: "default",
+    limit: 100,
+    remaining: 75,
+    resetSeconds: 30,
+    windowSeconds: 60,
+  });
+
+  assertEquals(result, '"default";q=100;w=60');
+});
+
+Deno.test("createRateLimitPolicyHeader - handles missing window", () => {
+  const result = buildRateLimitPolicyHeader({
+    policy: "default",
+    limit: 100,
+    remaining: 75,
+    resetSeconds: 30,
+  });
+
+  assertEquals(result, '"default";q=100');
+});
+
+Deno.test("parseRateLimitHeader - parses correct header format", () => {
+  const result = parseRateLimitHeader('"default";r=75;t=30');
+
+  assertEquals(result, {
+    policy: "default",
+    remaining: 75,
+    resetSeconds: 30,
+  });
+});
+
+Deno.test("parseRateLimitHeader - handles missing parameters", () => {
+  const result = parseRateLimitHeader('"default";r=75');
+
+  assertEquals(result, {
+    policy: "default",
+    remaining: 75,
+  });
+});
+
+Deno.test("parseRateLimitHeader - handles invalid format", () => {
+  const result = parseRateLimitHeader("invalid-format");
+
+  assertEquals(result, {});
+});
+
+Deno.test("parseRateLimitPolicyHeader - parses correct header format", () => {
+  const result = parseRateLimitPolicyHeader('"default";q=100;w=60');
+
+  assertEquals(result, {
+    policy: "default",
+    limit: 100,
+    windowSeconds: 60,
+  });
+});
+
+Deno.test("parseRateLimitPolicyHeader - handles missing parameters", () => {
+  const result = parseRateLimitPolicyHeader('"default";q=100');
+
+  assertEquals(result, {
+    policy: "default",
+    limit: 100,
+  });
+});
+
+Deno.test("parseRateLimitPolicyHeader - handles invalid format", () => {
+  const result = parseRateLimitPolicyHeader("invalid-format");
+
+  assertEquals(result, {});
 });
