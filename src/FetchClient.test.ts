@@ -1026,7 +1026,7 @@ Deno.test("can use per-domain rate limiting with auto-update from headers", asyn
 
       headers.set(
         "RateLimit-Policy",
-        buildRateLimitHeader({
+        buildRateLimitPolicyHeader({
           policy: "slow-api.example.com",
           remaining: remaining,
           resetSeconds: 30 - ((Date.now() - startTime) / 1000),
