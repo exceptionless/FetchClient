@@ -19,6 +19,10 @@
       "problemMatcher": [
         "$deno"
       ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
       "label": "deno: check",
       "detail": "$ deno check scripts/*.ts *.ts src/*.ts"
     },
@@ -43,7 +47,10 @@
       "problemMatcher": [
         "$deno-test"
       ],
-      "group": "test",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
       "label": "deno: test"
     }
   ]

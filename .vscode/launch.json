@@ -28,7 +28,7 @@
         "--inspect-wait",
         "--allow-all",
         "--filter",
-        "handles 400 response with non-JSON text"
+        "can use per-domain rate limiting with auto-update from headers"
       ],
       "attachSimplePort": 9229
     }

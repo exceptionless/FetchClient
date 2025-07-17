@@ -85,13 +85,10 @@ export class RateLimitMiddleware {
       const url = context.request.url;
 
       // Check if request is allowed
-      if (!this.#rateLimiter.isAllowed(url)) {
-        const group = this.#rateLimiter.getGroup(url);
-        const bucket = this.#rateLimiter["buckets"].get(group);
-        const resetTime = bucket?.resetTime ?? Date.now();
-        const remainingRequests = this.#rateLimiter.getRemainingRequests(
-          url,
-        );
+      if (!this.rateLimiter.isAllowed(url)) {
+        const group = this.rateLimiter.getGroup(url);
+        const resetTime = this.rateLimiter.getResetTime(url) ?? Date.now();
+        const remainingRequests = this.rateLimiter.getRemainingRequests(url);
 
         if (this.throwOnRateLimit) {
           throw new RateLimitError(
@@ -102,11 +99,9 @@ export class RateLimitMiddleware {
         }
 
         // Create a 429 Too Many Requests response
-        const groupOptions = this.#rateLimiter.getGroupOptions(group);
-        const maxRequests = groupOptions?.maxRequests ??
-          this.#rateLimiter["options"].maxRequests;
-        const windowSeconds = groupOptions?.windowSeconds ??
-          this.#rateLimiter["options"].windowSeconds;
+        const groupOptions = this.rateLimiter.getGroupOptions(group);
+        const maxRequests = groupOptions.maxRequests ?? 0;
+        const windowSeconds = groupOptions.windowSeconds ?? 0;
 
         // Create IETF standard rate limit headers
         const resetSeconds = Math.ceil((resetTime - Date.now()) / 1000);

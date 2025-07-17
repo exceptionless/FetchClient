@@ -296,11 +296,14 @@ export class RateLimiter {
         headers.get("x-rate-limit-reset");
     }
 
+    let hasChanges = false;
+
     // Apply the parsed values
     if (limit) {
       const maxRequests = parseInt(limit, 10);
       if (!isNaN(maxRequests)) {
         newOptions.maxRequests = maxRequests;
+        hasChanges = true;
       }
     }
 
@@ -308,6 +311,7 @@ export class RateLimiter {
       const windowSeconds = parseInt(window, 10);
       if (!isNaN(windowSeconds)) {
         newOptions.windowSeconds = windowSeconds;
+        hasChanges = true;
       }
     } else if (reset) {
       // If no window header, try to calculate from reset time
@@ -316,11 +320,12 @@ export class RateLimiter {
         const now = Math.floor(Date.now() / 1000);
         const windowSeconds = Math.max(1, resetTime - now);
         newOptions.windowSeconds = windowSeconds;
+        hasChanges = true;
       }
     }
 
     // Update the group options if we found valid headers
-    if (Object.keys(newOptions).length > Object.keys(currentOptions).length) {
+    if (hasChanges) {
       this.setGroupOptions(group, newOptions);
     }
   }
