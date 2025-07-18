@@ -5,6 +5,11 @@ import type { ProblemDetails } from "./ProblemDetails.ts";
 import { FetchClientCache } from "./FetchClientCache.ts";
 import type { FetchClientOptions } from "./FetchClientOptions.ts";
 import { type IObjectEvent, ObjectEvent } from "./ObjectEvent.ts";
+import {
+  RateLimitMiddleware,
+  type RateLimitMiddlewareOptions,
+} from "./RateLimitMiddleware.ts";
+import { groupByDomain, type RateLimiter } from "./RateLimiter.ts";
 
 type Fetch = typeof globalThis.fetch;
 
@@ -15,6 +20,7 @@ export class FetchClientProvider {
   #options: FetchClientOptions = {};
   #fetch?: Fetch;
   #cache: FetchClientCache;
+  #rateLimitMiddleware?: RateLimitMiddleware;
   #counter = new Counter();
   #onLoading = new ObjectEvent<boolean>();
 
@@ -186,6 +192,47 @@ export class FetchClientProvider {
         middleware,
       ],
     };
+  }
+
+  /**
+   * Enables rate limiting for all FetchClient instances created by this provider.
+   * @param options - The rate limiting configuration options.
+   */
+  public useRateLimit(options: RateLimitMiddlewareOptions) {
+    this.#rateLimitMiddleware = new RateLimitMiddleware(options);
+    this.useMiddleware(this.#rateLimitMiddleware.middleware());
+  }
+
+  /**
+   * Enables rate limiting for all FetchClient instances created by this provider.
+   * @param options - The rate limiting configuration options.
+   */
+  public usePerDomainRateLimit(
+    options: Omit<RateLimitMiddlewareOptions, "getGroupFunc">,
+  ) {
+    this.#rateLimitMiddleware = new RateLimitMiddleware({
+      ...options,
+      getGroupFunc: groupByDomain,
+    });
+    this.useMiddleware(this.#rateLimitMiddleware.middleware());
+  }
+
+  /**
+   * Gets the rate limiter instance used for rate limiting.
+   * @returns The rate limiter instance, or undefined if rate limiting is not enabled.
+   */
+  public get rateLimiter(): RateLimiter | undefined {
+    return this.#rateLimitMiddleware?.rateLimiter;
+  }
+
+  /**
+   * Removes the rate limiting middleware from all FetchClient instances created by this provider.
+   */
+  public removeRateLimit() {
+    this.#rateLimitMiddleware = undefined;
+    this.#options.middleware = this.#options.middleware?.filter(
+      (m) => !(m instanceof RateLimitMiddleware),
+    );
   }
 }
 
