@@ -3,18 +3,12 @@
 
 FetchClient is a library that makes it easier to use the fetch API for JSON APIs. It provides the following features:
 
-- [FetchClient   ](#fetchclient---)
-  - [Install](#install)
-  - [Docs](#docs)
-  - [Usage](#usage)
-    - [Typed Response](#typed-response)
-    - [Typed Response Using a Function](#typed-response-using-a-function)
-    - [Model Validator](#model-validator)
-    - [Caching](#caching)
-    - [Middleware](#middleware)
-    - [Rate Limiting](#rate-limiting)
-  - [Contributing](#contributing)
-  - [License](#license)
+  - [Typed Response](#typed-response)
+  - [Functional Typed Response](#functional-typed-response)
+  - [Model Validator](#model-validator)
+  - [Caching](#caching)
+  - [Middleware](#middleware)
+  - [Rate Limiting](#rate-limiting)
 
 ## Install
 
@@ -45,7 +39,7 @@ const response = await client.getJSON<Products>(
 const products = response.data;
 ```
 
-### Typed Response Using a Function
+### Functional Typed Response
 
 ```ts
 import { getJSON } from '@exceptionless/fetchclient';
