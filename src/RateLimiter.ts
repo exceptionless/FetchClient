@@ -97,9 +97,8 @@ export class RateLimiter {
     const now = Date.now();
 
     // Use group-specific options if available, otherwise fall back to global options
-    const maxRequests = groupOptions.maxRequests ?? this.options.maxRequests;
-    const windowSeconds = groupOptions.windowSeconds ??
-      this.options.windowSeconds;
+    const maxRequests = groupOptions.maxRequests ?? 0;
+    const windowSeconds = groupOptions.windowSeconds ?? 0;
     const onRateLimitExceeded = groupOptions.onRateLimitExceeded ??
       this.options.onRateLimitExceeded;
 
@@ -147,8 +146,7 @@ export class RateLimiter {
     }
 
     const now = Date.now();
-    const windowSeconds = groupOptions.windowSeconds ??
-      this.options.windowSeconds;
+    const windowSeconds = groupOptions.windowSeconds ?? 0;
     const windowStart = now - (windowSeconds * 1000);
     return bucket.requests.filter((time) => time > windowStart).length;
   }
@@ -161,7 +159,7 @@ export class RateLimiter {
   public getRemainingRequests(url: string): number {
     const key = this.options.getGroupFunc(url);
     const groupOptions = this.getGroupOptions(key);
-    const maxRequests = groupOptions.maxRequests ?? this.options.maxRequests;
+    const maxRequests = groupOptions.maxRequests ?? 0;
 
     return Math.max(
       0,
@@ -199,12 +197,28 @@ export class RateLimiter {
   }
 
   /**
-   * Gets the options for a specific group.
+   * Gets the options for a specific group. Falls back to global options if not set.
    * @param group - The group key
    * @returns The options for the group
    */
   public getGroupOptions(group: string): GroupRateLimiterOptions {
-    return this.groupOptions.get(group) || {};
+    const options = this.groupOptions.get(group);
+    if (!options) {
+      return {
+        maxRequests: this.options.maxRequests,
+        windowSeconds: this.options.windowSeconds,
+      };
+    }
+    return options;
+  }
+
+  /**
+   * Checks if a group has specific options set.
+   * @param group - The group key
+   * @returns True if the group has options, false otherwise
+   */
+  public hasGroupOptions(group: string): boolean {
+    return this.groupOptions.has(group);
   }
 
   /**
@@ -252,7 +266,10 @@ export class RateLimiter {
    * @param headers - The response headers containing rate limit information
    */
   public updateFromHeaders(group: string, headers: Headers): void {
-    const currentOptions = this.getGroupOptions(group);
+    // Get existing group-specific options (not global fallback)
+    const currentOptions = this.hasGroupOptions(group)
+      ? this.groupOptions.get(group)!
+      : {};
     const newOptions: GroupRateLimiterOptions = { ...currentOptions };
 
     // Parse IETF standard rate limit headers first, then fall back to x-ratelimit headers

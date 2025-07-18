@@ -100,8 +100,8 @@ export class RateLimitMiddleware {
 
         // Create a 429 Too Many Requests response
         const groupOptions = this.rateLimiter.getGroupOptions(group);
-        const maxRequests = groupOptions.maxRequests ?? 0;
-        const windowSeconds = groupOptions.windowSeconds ?? 0;
+        const maxRequests = groupOptions.maxRequests!;
+        const windowSeconds = groupOptions.windowSeconds!;
 
         // Create IETF standard rate limit headers
         const resetSeconds = Math.ceil((resetTime - Date.now()) / 1000);

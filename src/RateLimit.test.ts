@@ -110,8 +110,8 @@ Deno.test("RateLimiter - group initialization", () => {
 
   // Check that non-configured groups get empty options (will use defaults)
   const otherOptions = rateLimiter.getGroupOptions("other.com");
-  assertEquals(otherOptions.maxRequests, undefined);
-  assertEquals(otherOptions.windowSeconds, undefined);
+  assertEquals(otherOptions.maxRequests, 5);
+  assertEquals(otherOptions.windowSeconds, 1);
 
   // Test that the group-specific limits are actually used
   assertEquals(rateLimiter.isAllowed("https://example.com/test"), true);
