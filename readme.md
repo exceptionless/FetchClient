@@ -3,12 +3,17 @@
 
 FetchClient is a library that makes it easier to use the fetch API for JSON APIs. It provides the following features:
 
-  - [Typed Response](#typed-response)
-  - [Functional Typed Response](#functional-typed-response)
-  - [Model Validator](#model-validator)
-  - [Caching](#caching)
-  - [Middleware](#middleware)
-  - [Rate Limiting](#rate-limiting)
+- [Typed Response](#typed-response) - Full TypeScript support with strongly typed responses
+- [Functional](#functional) - Standalone functions for simple usage
+- [Model Validator](#model-validator) - Built-in validation with Problem Details support
+- [Caching](#caching) - Response caching with TTL and programmatic invalidation
+- [Middleware](#middleware) - Extensible middleware pipeline for request/response handling
+- [Rate Limiting](#rate-limiting) - Built-in rate limiting with per-domain support
+- [Request Timeout](#request-timeout) - Configurable timeouts with AbortSignal support
+- [Error Handling](#error-handling) - Comprehensive error handling with Problem Details
+- [Authentication](#authentication) - Built-in Bearer token support
+- [Base URL](#base-url) - Global base URL configuration
+- [Loading State](#loading-state) - Track request loading state with events
 
 ## Install
 
@@ -39,20 +44,24 @@ const response = await client.getJSON<Products>(
 const products = response.data;
 ```
 
-### Functional Typed Response
+### Functional
 
 ```ts
-import { getJSON } from '@exceptionless/fetchclient';
+import { postJSON, getJSON } from '@exceptionless/fetchclient';
 
-type Products = {
-  products: Array<{ id: number; name: string }>;
-};
+type Product = { id: number; title: string };
+type Products = { products: Product[] };
 
-const response = await getJSON<Products>(
-  `https://dummyjson.com/products/search?q=iphone&limit=10`,
+const response = await postJSON<Product>(
+  "https://dummyjson.com/products/add",
+  {
+    name: "iPhone 13",
+  },
 );
 
-const products = response.data;
+const product = await getJSON<Product>(
+  `https://dummyjson.com/products/${response.data!.id}`,
+);
 ```
 
 ### Model Validator
@@ -145,6 +154,104 @@ const client = new FetchClient();
 const response = await client.getJSON(
   `https://api.example.com/data`,
 );
+```
+
+### Request Timeout
+
+```ts
+import { FetchClient } from '@exceptionless/fetchclient';
+
+const client = new FetchClient();
+
+// Set timeout for individual requests
+const response = await client.getJSON(
+  `https://api.example.com/data`,
+  { timeout: 5000 } // 5 seconds
+);
+
+// Use AbortSignal for cancellation
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 1000);
+
+const response2 = await client.getJSON(
+  `https://api.example.com/data`,
+  { signal: controller.signal }
+);
+```
+
+### Error Handling
+
+```ts
+import { FetchClient } from '@exceptionless/fetchclient';
+
+const client = new FetchClient();
+
+try {
+  const response = await client.getJSON(`https://api.example.com/data`);
+} catch (error) {
+  // Handle HTTP errors (4xx, 5xx)
+  if (error.problem) {
+    console.log(error.problem.title);
+    console.log(error.problem.detail);
+  }
+}
+
+// Or handle specific status codes
+const response = await client.getJSON(
+  `https://api.example.com/data`,
+  { 
+    expectedStatusCodes: [404, 500],
+    errorCallback: (response) => {
+      if (response.status === 404) {
+        console.log('Resource not found');
+        return true; // Don't throw
+      }
+    }
+  }
+);
+```
+
+### Authentication
+
+```ts
+import { FetchClient, setAccessTokenFunc } from '@exceptionless/fetchclient';
+
+// Set global access token function
+setAccessTokenFunc(() => localStorage.getItem('token'));
+
+const client = new FetchClient();
+const response = await client.getJSON(`https://api.example.com/data`);
+// Automatically adds Authorization: Bearer <token> header
+```
+
+### Base URL
+
+```ts
+import { FetchClient, setBaseUrl } from '@exceptionless/fetchclient';
+
+// Set global base URL
+setBaseUrl('https://api.example.com');
+
+const client = new FetchClient();
+const response = await client.getJSON(`/users/123`);
+// Requests to https://api.example.com/users/123
+```
+
+### Loading State
+
+```ts
+import { FetchClient } from '@exceptionless/fetchclient';
+
+const client = new FetchClient();
+
+// Track loading state
+client.loading.on((isLoading) => {
+  console.log(`Loading: ${isLoading}`);
+});
+
+// Check current loading state
+console.log(client.isLoading);
+console.log(client.requestCount);
 ```
 
 Also, take a look at the tests:
