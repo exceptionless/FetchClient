@@ -17,19 +17,19 @@ await build({
   importMap: "deno.json",
 
   package: {
-    name: "@foundatio/fetchclient",
+    name: "@foundatiofx/fetchclient",
     version: Deno.args[0],
     repository: {
       type: "git",
-      url: "git+https://github.com/foundatio/fetchclient.git",
+      url: "git+https://github.com/foundatiofx/fetchclient.git",
     },
-    homepage: "https://github.com/foundatio/fetchclient#readme",
+    homepage: "https://github.com/foundatiofx/fetchclient#readme",
     bugs: {
-      url: "https://github.com/foundatio/fetchclient/issues",
+      url: "https://github.com/foundatiofx/fetchclient/issues",
     },
     license: "Apache-2.0",
     description:
-      "A simple fetch client with middleware support for Deno and the browser.",
+      "A typed JSON fetch client with middleware support for Deno, Node and the browser.",
     author: {
       name: "Eric J. Smith",
       email: "eric@exceptionless.com",
