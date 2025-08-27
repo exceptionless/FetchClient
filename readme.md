@@ -1,6 +1,11 @@
-<!-- deno-fmt-ignore-file -->
-# FetchClient [![CI](https://github.com/exceptionless/fetchclient/workflows/CI/badge.svg)](https://github.com/exceptionless/fetchclient/actions?query=workflow%3ACI) [![NPM](https://img.shields.io/npm/v/%40exceptionless%2Ffetchclient)](https://www.npmjs.com/package/@exceptionless/fetchclient) [![JSR](https://jsr.io/badges/@exceptionless/fetchclient)](https://jsr.io/@exceptionless/fetchclient)
+![Foundatio](https://raw.githubusercontent.com/FoundatioFx/Foundatio/master/media/foundatio-dark-bg.svg#gh-dark-mode-only "Foundatio")![Foundatio](https://raw.githubusercontent.com/FoundatioFx/Foundatio/master/media/foundatio.svg#gh-light-mode-only "Foundatio")
 
+[![NPM](https://img.shields.io/npm/v/%40exceptionless%2Ffetchclient)](https://www.npmjs.com/package/@exceptionless/fetchclient)
+[![JSR](https://jsr.io/badges/@exceptionless/fetchclient)](https://jsr.io/@exceptionless/fetchclient)
+[![Build status](https://github.com/FoundatioFx/Foundatio/workflows/Build/badge.svg)](https://github.com/FoundatioFx/Foundatio/actions)
+[![Discord](https://img.shields.io/discord/715744504891703319)](https://discord.gg/6HxgFCx)
+
+<!-- deno-fmt-ignore-file -->
 FetchClient is a library that makes it easier to use the fetch API for JSON APIs. It provides the following features:
 
 - [Typed Response](#typed-response) - Full TypeScript support with strongly typed responses
