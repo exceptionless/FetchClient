@@ -112,7 +112,7 @@ jobs:
         with:
           node-version: "22.x"
           registry-url: "https://npm.pkg.github.com"
-          scope: "@foundatio"
+          scope: "@foundatiofx"
 
       - name: Push GitHub CI Packages
         if: github.event_name != 'pull_request'
