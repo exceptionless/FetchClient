@@ -17,15 +17,15 @@ await build({
   importMap: "deno.json",
 
   package: {
-    name: "@exceptionless/fetchclient",
+    name: "@foundatio/fetchclient",
     version: Deno.args[0],
     repository: {
       type: "git",
-      url: "git+https://github.com/exceptionless/fetchclient.git",
+      url: "git+https://github.com/foundatio/fetchclient.git",
     },
-    homepage: "https://github.com/exceptionless/fetchclient#readme",
+    homepage: "https://github.com/foundatio/fetchclient#readme",
     bugs: {
-      url: "https://github.com/exceptionless/fetchclient/issues",
+      url: "https://github.com/foundatio/fetchclient/issues",
     },
     license: "Apache-2.0",
     description:
