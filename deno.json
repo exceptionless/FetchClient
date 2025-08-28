@@ -1,6 +1,6 @@
 {
   "exports": "./mod.ts",
-  "name": "@foundatio/fetchclient",
+  "name": "@foundatiofx/fetchclient",
   "tasks": {
     "build": "deno run -A scripts/build.ts",
     "check": "deno check scripts/*.ts *.ts src/*.ts",

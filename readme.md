@@ -1,8 +1,8 @@
 ![Foundatio](https://raw.githubusercontent.com/FoundatioFx/Foundatio/master/media/foundatio-dark-bg.svg#gh-dark-mode-only "Foundatio")
 ![Foundatio](https://raw.githubusercontent.com/FoundatioFx/Foundatio/master/media/foundatio.svg#gh-light-mode-only "Foundatio")
 
-[![NPM](https://img.shields.io/npm/v/%40foundatio%2Ffetchclient)](https://www.npmjs.com/package/@foundatio/fetchclient)
-[![JSR](https://jsr.io/badges/@foundatio/fetchclient)](https://jsr.io/@foundatio/fetchclient)
+[![NPM](https://img.shields.io/npm/v/%40foundatiofx%2Ffetchclient)](https://www.npmjs.com/package/@foundatiofx/fetchclient)
+[![JSR](https://jsr.io/badges/@foundatiofx/fetchclient)](https://jsr.io/@foundatiofx/fetchclient)
 [![Build status](https://github.com/FoundatioFx/Foundatio/workflows/Build/badge.svg)](https://github.com/FoundatioFx/Foundatio/actions)
 [![Discord](https://img.shields.io/discord/715744504891703319)](https://discord.gg/6HxgFCx)
 
@@ -32,19 +32,19 @@ APIs. It provides the following features:
 ## Install
 
 ```shell
-npm install --save @foundatio/fetchclient
+npm install --save @foundatiofx/fetchclient
 ```
 
 ## Docs
 
-[API Documentation](https://jsr.io/@foundatio/fetchclient/doc)
+[API Documentation](https://jsr.io/@foundatiofx/fetchclient/doc)
 
 ## Usage
 
 ### Typed Response
 
 ```ts
-import { FetchClient } from "@foundatio/fetchclient";
+import { FetchClient } from "@foundatiofx/fetchclient";
 
 type Products = {
   products: Array<{ id: number; name: string }>;
@@ -61,7 +61,7 @@ const products = response.data;
 ### Functional
 
 ```ts
-import { getJSON, postJSON } from "@foundatio/fetchclient";
+import { getJSON, postJSON } from "@foundatiofx/fetchclient";
 
 type Product = { id: number; title: string };
 type Products = { products: Product[] };
@@ -81,7 +81,7 @@ const product = await getJSON<Product>(
 ### Model Validator
 
 ```ts
-import { FetchClient, setModelValidator } from "@foundatio/fetchclient";
+import { FetchClient, setModelValidator } from "@foundatiofx/fetchclient";
 
 setModelValidator(async (data: object | null) => {
   // use zod or any other validator
@@ -115,7 +115,7 @@ if (!response.ok) {
 ### Caching
 
 ```ts
-import { FetchClient } from "@foundatio/fetchclient";
+import { FetchClient } from "@foundatiofx/fetchclient";
 
 type Todo = { userId: number; id: number; title: string; completed: boolean };
 
@@ -135,7 +135,7 @@ client.cache.delete(["todos", "1"]);
 ### Middleware
 
 ```ts
-import { FetchClient, useMiddleware } from "@foundatio/fetchclient";
+import { FetchClient, useMiddleware } from "@foundatiofx/fetchclient";
 
 type Products = {
   products: Array<{ id: number; name: string }>;
@@ -156,7 +156,7 @@ const response = await client.getJSON<Products>(
 ### Rate Limiting
 
 ```ts
-import { FetchClient, useRateLimit } from "@foundatio/fetchclient";
+import { FetchClient, useRateLimit } from "@foundatiofx/fetchclient";
 
 // Enable rate limiting globally with 100 requests per minute
 useRateLimit({
@@ -173,7 +173,7 @@ const response = await client.getJSON(
 ### Request Timeout
 
 ```ts
-import { FetchClient } from "@foundatio/fetchclient";
+import { FetchClient } from "@foundatiofx/fetchclient";
 
 const client = new FetchClient();
 
@@ -196,7 +196,7 @@ const response2 = await client.getJSON(
 ### Error Handling
 
 ```ts
-import { FetchClient } from "@foundatio/fetchclient";
+import { FetchClient } from "@foundatiofx/fetchclient";
 
 const client = new FetchClient();
 
@@ -228,7 +228,7 @@ const response = await client.getJSON(
 ### Authentication
 
 ```ts
-import { FetchClient, setAccessTokenFunc } from "@foundatio/fetchclient";
+import { FetchClient, setAccessTokenFunc } from "@foundatiofx/fetchclient";
 
 // Set global access token function
 setAccessTokenFunc(() => localStorage.getItem("token"));
@@ -241,7 +241,7 @@ const response = await client.getJSON(`https://api.example.com/data`);
 ### Base URL
 
 ```ts
-import { FetchClient, setBaseUrl } from "@foundatio/fetchclient";
+import { FetchClient, setBaseUrl } from "@foundatiofx/fetchclient";
 
 // Set global base URL
 setBaseUrl("https://api.example.com");
@@ -254,7 +254,7 @@ const response = await client.getJSON(`/users/123`);
 ### Loading State
 
 ```ts
-import { FetchClient } from "@foundatio/fetchclient";
+import { FetchClient } from "@foundatiofx/fetchclient";
 
 const client = new FetchClient();
 
