@@ -1,9 +1,9 @@
-![Foundatio](https://raw.githubusercontent.com/FoundatioFx/Foundatio/master/media/foundatio-dark-bg.svg#gh-dark-mode-only "Foundatio")
-![Foundatio](https://raw.githubusercontent.com/FoundatioFx/Foundatio/master/media/foundatio.svg#gh-light-mode-only "Foundatio")
+![Foundatio](https://raw.githubusercontent.com/foundatiofx/foundatio/master/media/foundatio-dark-bg.svg#gh-dark-mode-only "Foundatio")
+![Foundatio](https://raw.githubusercontent.com/foundatiofx/foundatio/master/media/foundatio.svg#gh-light-mode-only "Foundatio")
 
 [![NPM](https://img.shields.io/npm/v/%40foundatiofx%2Ffetchclient)](https://www.npmjs.com/package/@foundatiofx/fetchclient)
 [![JSR](https://jsr.io/badges/@foundatiofx/fetchclient)](https://jsr.io/@foundatiofx/fetchclient)
-[![Build status](https://github.com/FoundatioFx/Foundatio/workflows/Build/badge.svg)](https://github.com/FoundatioFx/Foundatio/actions)
+[![Build status](https://github.com/foundatiofx/foundatio/workflows/Build/badge.svg)](https://github.com/foundatiofx/foundatio/actions)
 [![Discord](https://img.shields.io/discord/715744504891703319)](https://discord.gg/6HxgFCx)
 
 <!-- deno-fmt-ignore-file -->
