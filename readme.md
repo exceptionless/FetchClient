@@ -37,7 +37,11 @@ npm install --save @foundatiofx/fetchclient
 
 ## Docs
 
-[API Documentation](https://jsr.io/@foundatiofx/fetchclient/doc)
+- API Reference: <https://jsr.io/@foundatiofx/fetchclient/doc>
+- Docs Site (VitePress): see `docs/`
+  - Local dev: in `docs/` run `npm install` then `npm run dev`
+  - Build: `npm run build` (outputs to `docs/.vitepress/dist`)
+  - Preview: `npm run preview`
 
 ## Usage
 
