@@ -7,12 +7,15 @@ export default defineConfig({
   base: "/",
   ignoreDeadLinks: true,
   head: [
-    ["link", {
-      rel: "icon",
-      href:
-        "https://raw.githubusercontent.com/FoundatioFx/Foundatio/main/media/foundatio-icon.png",
-      type: "image/png",
-    }],
+    [
+      "link",
+      {
+        rel: "icon",
+        href:
+          "https://raw.githubusercontent.com/FoundatioFx/Foundatio/main/media/foundatio-icon.png",
+        type: "image/png",
+      },
+    ],
     ["meta", { name: "theme-color", content: "#3c8772" }],
   ],
   themeConfig: {
@@ -25,6 +28,7 @@ export default defineConfig({
     siteTitle: "FetchClient",
     nav: [
       { text: "Guide", link: "/guide/what-is-fetchclient" },
+      { text: "API", link: "https://jsr.io/@foundatiofx/fetchclient/doc" },
       { text: "GitHub", link: "https://github.com/FoundatioFx/FetchClient" },
     ],
     sidebar: {
@@ -38,6 +42,8 @@ export default defineConfig({
             },
             { text: "Getting Started", link: "/guide/getting-started" },
             { text: "Features", link: "/guide/features" },
+            { text: "Usage Examples", link: "/guide/usage-examples" },
+            { text: "Contributing", link: "/guide/contributing" },
           ],
         },
       ],
