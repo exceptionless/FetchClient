@@ -41,7 +41,6 @@ export default defineConfig({
               link: "/guide/what-is-fetchclient",
             },
             { text: "Getting Started", link: "/guide/getting-started" },
-            { text: "Features", link: "/guide/features" },
             { text: "Usage Examples", link: "/guide/usage-examples" },
             { text: "Contributing", link: "/guide/contributing" },
           ],

@@ -33,7 +33,7 @@ console.log(data?.products.length);
 ## Documentation
 
 - Guide & Examples: <https://fetchclient.foundatio.dev>
-  - Getting Started, Features, Usage Examples, Contributing
+  - Getting Started, Usage Examples, Contributing
 - API Reference: <https://jsr.io/@foundatiofx/fetchclient/doc>
 
 ---
