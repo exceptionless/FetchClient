@@ -1,0 +1,68 @@
+name: Development Environment Setup
+
+description: |
+  Setup steps for the FetchClient Deno project development environment.
+  This configuration helps GitHub Copilot understand how to set up and work with this Deno TypeScript project.
+
+steps:
+  - name: Setup Deno
+    uses: denoland/setup-deno@v2
+    with:
+      deno-version: v2.x
+
+  - name: Cache Deno dependencies
+    uses: actions/cache@v4
+    with:
+      path: |
+        ~/.cache/deno
+        ~/.deno
+      key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
+      restore-keys: |
+        deno-${{ runner.os }}-
+
+  - name: Install dependencies
+    run: deno cache mod.ts
+
+  - name: Type check
+    run: deno task check
+
+  - name: Format check
+    run: deno task format-check
+
+  - name: Lint
+    run: deno task lint
+
+  - name: Run tests
+    run: deno task test
+
+environment:
+  deno_version: v2.x
+  node_version: "22.x"
+  
+development_commands:
+  - name: Run tests
+    command: deno task test
+    description: Run all tests with network permissions
+
+  - name: Type check
+    command: deno task check
+    description: Type check TypeScript files
+
+  - name: Format code
+    command: deno fmt
+    description: Format TypeScript files
+
+  - name: Lint code
+    command: deno task lint
+    description: Lint TypeScript files
+
+  - name: Build NPM package
+    command: deno task build
+    description: Build NPM package using DNT
+
+project_info:
+  language: TypeScript
+  runtime: Deno
+  package_manager: Deno
+  test_framework: Deno Test
+  build_tool: DNT (Deno to NPM Transform)
